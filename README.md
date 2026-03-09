@@ -84,6 +84,40 @@ python main.py --all
 python main.py --source clutch --country "India" --max-pages 2
 ```
 
+### Send personalized campaign emails to scraped companies:
+1) Configure SMTP in `.env`:
+```env
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+SMTP_FROM=your-email@gmail.com
+SMTP_FROM_NAME=Vivan Web Solution
+SMTP_REPLY_TO=your-email@gmail.com
+SMTP_USE_TLS=1
+SMTP_USE_SSL=0
+```
+
+2) Dry run (preview recipients, no send):
+```bash
+python send_campaign_emails.py --subject "Quick Introduction from Vivan Web Solution" --dry-run
+```
+
+3) Send to all recipients from DB:
+```bash
+python send_campaign_emails.py --subject "Quick Introduction from Vivan Web Solution"
+```
+
+Send using your screenshot/design image (with dynamic company name greeting):
+```bash
+python send_campaign_emails.py --subject "Quick Introduction from Vivan Web Solution" --screenshot-path "C:\path\to\campaign.png"
+```
+
+Optional filters:
+```bash
+python send_campaign_emails.py --subject "Quick Introduction from Vivan Web Solution" --source clutch --country "United Kingdom" --batch-size 40 --pause-seconds 3
+```
+
 ---
 
 ## 📤 Export CSV
