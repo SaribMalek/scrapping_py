@@ -311,7 +311,7 @@ def _screenshot_html(company_name: str, screenshot_cid: str) -> str:
       <td align="center" style="padding:10px 0;">
         <table role="presentation" width="680" cellspacing="0" cellpadding="0" style="width:680px;max-width:680px;background:#f3f3f3;">
           <tr>
-            <td style="padding:10px 12px;color:#1f83d7;font-size:26px;line-height:1.25;font-weight:500;">Hello, {safe_name}</td>
+            <td style="padding:10px 12px;color:#1f83d7;font-size:26px;line-height:1.25;font-weight:500;">Hello {safe_name},</td>
           </tr>
           <tr>
             <td style="padding:0 12px 12px 12px;">
