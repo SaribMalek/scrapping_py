@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vivan Web Solution Pvt. Ltd. - Newsletter</title>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Roboto and Poppins for a professional look -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Roboto:wght@400;500;700;900&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 40px 15px;
+            background-color: #f0f6fc;
+            /* Very light blue background */
+            font-family: 'Poppins', sans-serif;
+            color: #1e3a5f;
+            /* Darker navy blue text */
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .email-container {
+            max-width: 650px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(10, 40, 90, 0.08);
+            /* Blue tinted shadow */
+            border: 1px solid #e1eaf5;
+        }
+
+        /* HEADER */
+        .header {
+            text-align: center;
+            padding: 40px 20px 30px;
+            background-color: #ffffff;
+        }
+
+        .logo-wrap {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .logo-icon {
+            background: linear-gradient(135deg, #0052cc 0%, #002b66 100%);
+            color: white;
+            font-size: 32px;
+            font-weight: 900;
+            font-family: 'Roboto', sans-serif;
+            width: 65px;
+            height: 65px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 16px;
+            box-shadow: 0 6px 15px rgba(0, 82, 204, 0.2);
+        }
+
+        .logo-text-wrap {
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .logo-title {
+            font-family: 'Roboto', sans-serif;
+            font-size: 42px;
+            font-weight: 900;
+            color: #003380;
+            margin: 0;
+            line-height: 1;
+            letter-spacing: -1px;
+        }
+
+        .logo-subtitle {
+            font-size: 11px;
+            color: #4d7cc7;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+
+        /* DIVIDER */
+        .main-divider {
+            height: 4px;
+            background: linear-gradient(90deg, #0052cc 0%, #4c8bf5 100%);
+            width: 100%;
+        }
+
+        /* BODY CONTENT */
+        .content-body {
+            padding: 40px 50px;
+        }
+
+        .greeting {
+            color: #003380;
+            font-size: 26px;
+            margin: 0 0 12px 0;
+            font-weight: 700;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        .greeting-line {
+            height: 2px;
+            background-color: #cce0ff;
+            width: 100%;
+            margin-bottom: 30px;
+            border-radius: 2px;
+        }
+
+        .info-box {
+            background-color: #f7faff;
+            border: 1px solid #cce0ff;
+            border-radius: 8px;
+            padding: 20px 25px;
+            margin-bottom: 20px;
+            box-shadow: inset 0 2px 4px rgba(0, 82, 204, 0.01);
+            transition: transform 0.2s ease;
+        }
+
+        .info-box:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 82, 204, 0.06);
+            border-color: #99c2ff;
+        }
+
+        .info-box p {
+            margin: 0;
+            font-size: 15px;
+            line-height: 1.7;
+            color: #2b456b;
+        }
+
+        .text-primary {
+            color: #0052cc;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        /* BUTTONS & SECTIONS */
+        .section-center {
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        .pill-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 14px 34px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 15px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .pill-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.15);
+            transform: scaleX(0);
+            transform-origin: right;
+            transition: transform 0.4s ease;
+            z-index: -1;
+        }
+
+        .pill-btn:hover::before {
+            transform: scaleX(1);
+            transform-origin: left;
+        }
+
+        .pill-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 82, 204, 0.25);
+        }
+
+        .btn-blue {
+            background: linear-gradient(135deg, #0052cc 0%, #003380 100%);
+            color: #ffffff;
+            box-shadow: 0 6px 20px rgba(0, 82, 204, 0.25);
+        }
+
+        .btn-light-blue {
+            background: linear-gradient(135deg, #3385ff 0%, #0052cc 100%);
+            color: #ffffff;
+            box-shadow: 0 6px 20px rgba(51, 133, 255, 0.25);
+        }
+
+        .icon-star {
+            color: #ffffff;
+            font-size: 18px;
+        }
+
+        .icon-link {
+            color: #ffffff;
+            font-size: 18px;
+        }
+
+        .brand-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 35px;
+            border: 1px solid #cce0ff;
+            border-radius: 12px;
+            padding: 25px;
+            margin-top: 25px;
+            background-color: #ffffff;
+            box-shadow: 0 4px 15px rgba(0, 82, 204, 0.04);
+            flex-wrap: wrap;
+        }
+
+        /* Brand Logos */
+        .brand-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Roboto', sans-serif;
+            transition: transform 0.2s;
+        }
+
+        .brand-item:hover {
+            transform: scale(1.05);
+        }
+
+        .brand-logo-text {
+            color: #0052cc;
+            font-weight: 800;
+            font-size: 20px;
+        }
+
+        .brand-logo-text-bold {
+            color: #003380;
+            font-weight: 900;
+            font-size: 22px;
+        }
+
+        /* Social Logos */
+        .social-logo {
+            color: #0052cc;
+            font-weight: 600;
+            font-size: 18px;
+        }
+
+        /* FOOTER */
+        .footer-section {
+            background-color: #f2f7ff;
+            padding: 45px 40px;
+            text-align: center;
+            border-top: 1px solid #cce0ff;
+        }
+
+        .footer-desc {
+            font-size: 15px;
+            color: #3b5f8c;
+            line-height: 1.6;
+            margin: 0 0 35px 0;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 40px;
+        }
+
+        .footer-btn {
+            background-color: #ffffff;
+            color: #0052cc;
+            border: 1px solid #0052cc;
+            padding: 14px 24px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: all 0.3s;
+            box-shadow: 0 2px 6px rgba(0, 82, 204, 0.1);
+        }
+
+        .footer-btn:hover {
+            background-color: #0052cc;
+            color: #ffffff;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 82, 204, 0.2);
+        }
+
+        .legal-text {
+            font-size: 12px;
+            color: #6688b3;
+            margin-bottom: 25px;
+        }
+
+        .unsubscribe-btn {
+            display: inline-block;
+            padding: 10px 30px;
+            border: 1.5px solid #6699cc;
+            color: #6699cc;
+            border-radius: 50px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            background-color: transparent;
+            transition: all 0.3s;
+        }
+
+        .unsubscribe-btn:hover {
+            background-color: #e6f0ff;
+            color: #003380;
+            border-color: #003380;
+        }
+
+        /* RESPONSIVE DESIGN */
+        @media (max-width: 650px) {
+            .content-body {
+                padding: 30px 20px;
+            }
+
+            .brand-container {
+                flex-direction: column;
+                gap: 20px;
+                padding: 20px;
+            }
+
+            .footer-links {
+                flex-direction: column;
+            }
+
+            .footer-btn {
+                width: 100%;
+                box-sizing: border-box;
+            }
+
+            .logo-title {
+                font-size: 32px;
+            }
+
+            .greeting {
+                font-size: 22px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo-wrap">
+                <div class="logo-icon">VM</div>
+                <div class="logo-text-wrap">
+                    <h2 class="logo-title">Vivan</h2>
+                    <span class="logo-subtitle">WEB SOLUTION PVT. LTD.</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-divider"></div>
+
+        <!-- Body -->
+        <div class="content-body">
+            <h1 class="greeting">Hello Team,</h1>
+            <div class="greeting-line"></div>
+
+            <div class="info-box">
+                <p>I hope this email finds you well.</p>
+            </div>
+
+            <div class="info-box">
+                <p>We represent <span class="text-primary">Vivan Web Solution Pvt. Ltd.</span>, an innovative IT and Web Development company based in India, specializing in building high-quality and scalable web applications. With <span class="text-primary">10+ years of experience</span>, we have successfully delivered projects for clients across <span class="text-primary">20+ countries</span>.</p>
+            </div>
+
+            <div class="info-box">
+                <p>Our team of <span class="text-primary">25+ skilled developers</span> focuses on delivering reliable, high-performance solutions while connecting some of India's top tech talent with global businesses. We work with modern technologies including <span class="text-primary">PHP, Laravel, Symfony, Node.js, React, Vue, and AI-driven solutions</span>.</p>
+            </div>
+
+            <div class="info-box">
+                <p>We would be excited to collaborate with you and help build a powerful, scalable web application that meets your business goals and exceeds expectations.</p>
+            </div>
+
+            <div class="info-box">
+                <p>We would be happy to discuss your requirements and explore how we can support your project.</p>
+            </div>
+
+            <!-- Meeting Actions -->
+            <div class="section-center" style="margin-top: 15px; margin-bottom: 25px;">
+                <span style="display:inline-block;background:linear-gradient(135deg,#1a73e8,#42a5f5);color:#ffffff;padding:7px 22px;border-radius:30px;font-size:15px;font-weight:700;letter-spacing:0.3px;margin-bottom:20px;text-transform: uppercase;">
+                    &#128197; You can schedule a meeting with me on :
+                </span>
+                <br>
+                <a href="https://calendly.com/nirav-patel-vivanwebsolution/30min" class="footer-btn" style="display: inline-block; font-size: 16px;">
+                    Schedule a Meeting
+                </a>
+            </div>
+
+            <!-- Review Actions -->
+            <div class="section-center" style="margin-top: 35px;">
+                <div class="pill-btn btn-blue" style="font-size: 15px; padding: 12px 30px; border-radius: 50px; background: #1a73e8; box-shadow: none; color: white;">
+                    <i class="fas fa-star" style="color: #ffcc00; margin-right: 8px;"></i> Discover What Our Clients Say
+                </div>
+                <div class="brand-container" style="border: 1px solid #d1e0ff; border-radius: 12px; padding: 30px 40px; margin-top: 25px; background: #ffffff; text-align: center; max-width: 550px; margin-left: auto; margin-right: auto; box-shadow: none;">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 0 auto; width: 100%;">
+                        <tr>
+                            <td align="left" style="width: 33.33%; vertical-align: middle; padding: 0;">
+                                <div class="brand-item brand-logo-text" style="color: #4b8bfa; font-size: 28px; font-weight: 700; display: flex; align-items: center;">
+                                    <i class="fas fa-poll-h" style="margin-right: 8px;"></i> GoodFirms
+                                </div>
+                            </td>
+                            <td align="center" style="width: 33.33%; vertical-align: middle; padding: 0;">
+                                <div class="brand-item" style="color: #6fda44; font-size: 26px; font-weight: 700;">
+                                    Upwork
+                                </div>
+                            </td>
+                            <td align="right" style="width: 33.33%; vertical-align: middle; padding: 0;">
+                                <div class="brand-item brand-logo-text-bold" style="color: #214f52; font-size: 28px; font-weight: 900;">
+                                    Clutch
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Social Actions -->
+            <div class="section-center" style="margin-top: 35px; margin-bottom: 40px;">
+                <div class="pill-btn btn-light-blue" style="font-size: 15px; padding: 12px 30px; border-radius: 50px; background: #1a73e8; box-shadow: none; color: white;">
+                    <i class="fas fa-link" style="color: #b3d4ff; margin-right: 8px;"></i> Connect With Us On Social Media
+                </div>
+                <div class="brand-container" style="border: 1px solid #d1e0ff; border-radius: 12px; padding: 30px 40px; margin-top: 25px; background: #ffffff; text-align: center; max-width: 550px; margin-left: auto; margin-right: auto; box-shadow: none;">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 0 auto; width: 100%;">
+                        <tr>
+                            <td align="left" style="width: 33.33%; vertical-align: middle; padding: 0;">
+                                <div class="brand-item social-logo" style="background: #0062e0; color: white; padding: 5px 12px; font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; width: max-content;">
+                                    facebook
+                                </div>
+                            </td>
+                            <td align="center" style="width: 33.33%; vertical-align: middle; padding: 0;">
+                                <div class="brand-item social-logo" style="color: #262626; font-size: 24px; font-family: 'Brush Script MT', cursive; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                    <i class="fab fa-instagram" style="font-size: 32px; background: -webkit-linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;"></i> Instagram
+                                </div>
+                            </td>
+                            <td align="right" style="width: 33.33%; vertical-align: middle; padding: 0;">
+                                <div class="brand-item social-logo" style="color: #000000; font-size: 24px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 4px; float: right;">
+                                    Linked<span style="background: #0a66c2; color: white; padding: 2px 6px; border-radius: 4px;">in</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer-section">
+            <p class="footer-desc">
+                If our services intrigue you, please don't hesitate to <a href="#" class="text-primary">contact us</a>
+                for further discussions.<br>We are excited to hear from you.
+            </p>
+
+            <div class="footer-links">
+                <a href="#" class="footer-btn">Discover Our Portfolio</a>
+                <a href="#" class="footer-btn">Company Brochure</a>
+                <a href="#" class="footer-btn">Visit Our Website</a>
+            </div>
+
+            <p class="legal-text">You received this email because you are registered with Vivan Web Solution.</p>
+
+            <a href="#" class="unsubscribe-btn">Unsubscribe</a>
+        </div>
+    </div>
+
+</body>
+
+</html>

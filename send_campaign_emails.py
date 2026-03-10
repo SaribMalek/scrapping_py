@@ -60,235 +60,339 @@ def _default_html(
 ) -> str:
     safe_name = company_name.strip() or "Team"
     asset_cids = asset_cids or {}
+    font_stack = "'Poppins', 'Segoe UI', Tahoma, Arial, sans-serif"
     logo_html = (
-        f'<img src="cid:{logo_cid}" alt="Vivan Web Solution" style="height:62px;max-width:260px;width:auto;display:block;margin:0 auto;border:0;object-fit:contain;">'
+        f'<img src="cid:{logo_cid}" alt="Vivan Web Solution" style="display:block;width:100%;max-width:280px;height:auto;margin:0 auto;border:0;">'
         if logo_cid
-        else '<div style="font-size:30px;font-weight:700;color:#2d2d2d;line-height:1;">Vivan</div>'
+        else (
+            '<table role="presentation" cellspacing="0" cellpadding="0" align="center">'
+            '<tr>'
+            '<td style="background:linear-gradient(135deg,#0052cc 0%,#002b66 100%);color:#ffffff;font-size:26px;'
+            'font-weight:900;font-family:\'Segoe UI\',Tahoma,Arial,sans-serif;width:54px;height:54px;text-align:center;'
+            'border-radius:12px;box-shadow:0 6px 15px rgba(0,82,204,0.2);">VM</td>'
+            '<td style="padding-left:12px;text-align:left;">'
+            '<div style="font-family:\'Segoe UI\',Tahoma,Arial,sans-serif;font-size:34px;font-weight:900;color:#003380;line-height:1;">Vivan</div>'
+            '<div style="font-size:10px;color:#4d7cc7;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;">WEB SOLUTION PVT. LTD.</div>'
+            '</td>'
+            '</tr>'
+            '</table>'
+        )
+    )
+    review_row_html = (
+        f'<a href="https://www.goodfirms.co/company/vivan-web-solution-pvt-ltd" target="_blank" rel="noopener noreferrer" style="display:inline-block;text-decoration:none;">'
+        f'<img src="cid:{asset_cids["review_row"]}" alt="GoodFirms, Upwork and Clutch" style="display:block;width:100%;max-width:430px;height:auto;margin:0 auto;border:0;"></a>'
+        if asset_cids.get("review_row")
+        else None
     )
     gf_html = (
-        f'<a href="https://www.goodfirms.co/company/vivan-web-solution-pvt-ltd" target="_blank" rel="noopener noreferrer"><img src="cid:{asset_cids["goodfirms"]}" alt="GoodFirms" style="height:30px;max-width:150px;width:auto;vertical-align:middle;border:0;object-fit:contain;"></a>'
+        f'<a href="https://www.goodfirms.co/company/vivan-web-solution-pvt-ltd" target="_blank" rel="noopener noreferrer" style="display:inline-block;text-decoration:none;">'
+        f'<img src="cid:{asset_cids["goodfirms"]}" alt="GoodFirms" style="height:30px;max-width:150px;width:auto;vertical-align:middle;border:0;"></a>'
         if asset_cids.get("goodfirms")
-        else '<a href="https://www.goodfirms.co/company/vivan-web-solution-pvt-ltd" target="_blank" rel="noopener noreferrer" style="color:#346ea5;text-decoration:none;">GoodFirms</a>'
+        else '<a href="https://www.goodfirms.co/company/vivan-web-solution-pvt-ltd" target="_blank" rel="noopener noreferrer" style="color:#4b8bfa;text-decoration:none;font-weight:700;">GoodFirms</a>'
     )
     upwork_html = (
-        f'<a href="https://www.upwork.com/ag/vivan/" target="_blank" rel="noopener noreferrer"><img src="cid:{asset_cids["upwork"]}" alt="Upwork" style="height:24px;max-width:112px;width:auto;vertical-align:middle;border:0;object-fit:contain;"></a>'
+        f'<a href="https://www.upwork.com/ag/vivan/" target="_blank" rel="noopener noreferrer" style="display:inline-block;text-decoration:none;">'
+        f'<img src="cid:{asset_cids["upwork"]}" alt="Upwork" style="height:24px;max-width:112px;width:auto;vertical-align:middle;border:0;"></a>'
         if asset_cids.get("upwork")
-        else '<a href="https://www.upwork.com/ag/vivan/" target="_blank" rel="noopener noreferrer" style="color:#7bb340;text-decoration:none;">upwork</a>'
+        else '<a href="https://www.upwork.com/ag/vivan/" target="_blank" rel="noopener noreferrer" style="color:#6fda44;text-decoration:none;font-weight:700;">Upwork</a>'
     )
     clutch_html = (
-        f'<a href="https://clutch.co/profile/vivan-web-solution#highlights" target="_blank" rel="noopener noreferrer"><img src="cid:{asset_cids["clutch"]}" alt="Clutch" style="height:26px;max-width:105px;width:auto;vertical-align:middle;border:0;object-fit:contain;"></a>'
+        f'<a href="https://clutch.co/profile/vivan-web-solution#highlights" target="_blank" rel="noopener noreferrer" style="display:inline-block;text-decoration:none;">'
+        f'<img src="cid:{asset_cids["clutch"]}" alt="Clutch" style="height:26px;max-width:105px;width:auto;vertical-align:middle;border:0;"></a>'
         if asset_cids.get("clutch")
-        else '<a href="https://clutch.co/profile/vivan-web-solution#highlights" target="_blank" rel="noopener noreferrer" style="color:#255f66;text-decoration:none;">Clutch</a>'
+        else '<a href="https://clutch.co/profile/vivan-web-solution#highlights" target="_blank" rel="noopener noreferrer" style="color:#214f52;text-decoration:none;font-weight:900;">Clutch</a>'
+    )
+    social_row_html = (
+        f'<a href="https://www.linkedin.com/company/vivan-websolution-pvt-ltd/" target="_blank" rel="noopener noreferrer" style="display:inline-block;text-decoration:none;">'
+        f'<img src="cid:{asset_cids["social_row"]}" alt="Facebook, Instagram and LinkedIn" style="display:block;width:100%;max-width:308px;height:auto;margin:0 auto;border:0;"></a>'
+        if asset_cids.get("social_row")
+        else None
     )
     fb_html = (
-        f'<a href="https://www.facebook.com/VivanWebSolution/" target="_blank" rel="noopener noreferrer"><img src="cid:{asset_cids["facebook"]}" alt="Facebook" style="height:22px;max-width:90px;width:auto;vertical-align:middle;border:0;object-fit:contain;"></a>'
+        f'<a href="https://www.facebook.com/VivanWebSolution/" target="_blank" rel="noopener noreferrer" style="display:inline-block;text-decoration:none;">'
+        f'<img src="cid:{asset_cids["facebook"]}" alt="Facebook" style="height:22px;max-width:90px;width:auto;vertical-align:middle;border:0;"></a>'
         if asset_cids.get("facebook")
         else '<a href="https://www.facebook.com/VivanWebSolution/" target="_blank" rel="noopener noreferrer" style="font-weight:700;color:#1b4f9c;text-decoration:none;">facebook</a>'
     )
     ig_html = (
-        f'<a href="https://www.instagram.com/vivanweb/?hl=en" target="_blank" rel="noopener noreferrer"><img src="cid:{asset_cids["instagram"]}" alt="Instagram" style="height:22px;max-width:100px;width:auto;vertical-align:middle;border:0;object-fit:contain;"></a>'
+        f'<a href="https://www.instagram.com/vivanweb/?hl=en" target="_blank" rel="noopener noreferrer" style="display:inline-block;text-decoration:none;">'
+        f'<img src="cid:{asset_cids["instagram"]}" alt="Instagram" style="height:22px;max-width:100px;width:auto;vertical-align:middle;border:0;"></a>'
         if asset_cids.get("instagram")
         else '<a href="https://www.instagram.com/vivanweb/?hl=en" target="_blank" rel="noopener noreferrer" style="font-weight:700;color:#cf2e7e;text-decoration:none;">Instagram</a>'
     )
     li_html = (
-        f'<a href="https://www.linkedin.com/company/vivan-websolution-pvt-ltd/" target="_blank" rel="noopener noreferrer"><img src="cid:{asset_cids["linkedin"]}" alt="LinkedIn" style="height:22px;max-width:90px;width:auto;vertical-align:middle;border:0;object-fit:contain;"></a>'
+        f'<a href="https://www.linkedin.com/company/vivan-websolution-pvt-ltd/" target="_blank" rel="noopener noreferrer" style="display:inline-block;text-decoration:none;">'
+        f'<img src="cid:{asset_cids["linkedin"]}" alt="LinkedIn" style="height:22px;max-width:90px;width:auto;vertical-align:middle;border:0;"></a>'
         if asset_cids.get("linkedin")
         else '<a href="https://www.linkedin.com/company/vivan-websolution-pvt-ltd/" target="_blank" rel="noopener noreferrer" style="font-weight:700;color:#1d63ab;text-decoration:none;">LinkedIn</a>'
     )
     return f"""\
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Vivan Web Solution - Introduction</title>
+  <title>Vivan Web Solution Pvt. Ltd. - Newsletter</title>
   <style>
     body {{
       margin: 0;
-      padding: 0;
-      background-color: #eef2f7;
-      font-family: Arial, Helvetica, sans-serif;
+      padding: 40px 15px;
+      background-color: #f0f6fc;
+      font-family: {font_stack};
+      color: #1e3a5f;
     }}
-    .email-wrapper {{
+    table, td, div, p, a, span, h1, h2 {{
+      font-family: {font_stack} !important;
+    }}
+    .email-container {{
       width: 100%;
-      max-width: 600px;
+      max-width: 650px;
       margin: 0 auto;
-      background: #ffffff;
-      border-radius: 12px;
+      background-color: #ffffff;
+      border-radius: 8px;
       overflow: hidden;
+      box-shadow: 0 10px 40px rgba(10, 40, 90, 0.08);
+      border: 1px solid #e1eaf5;
     }}
     .header {{
       text-align: center;
-      padding: 24px 24px 16px 24px;
-      border-bottom: 3px solid #1a73e8;
+      padding: 40px 20px 30px;
+      background-color: #ffffff;
+    }}
+    .main-divider {{
+      height: 4px;
+      background: linear-gradient(90deg, #0052cc 0%, #4c8bf5 100%);
+      width: 100%;
+    }}
+    .content-body {{
+      padding: 40px 50px;
     }}
     .greeting {{
-      padding: 20px 24px 0 24px;
-      color: #1a73e8;
-      font-size: 28px;
-      line-height: 1.3;
+      color: #003380;
+      font-size: 26px;
+      margin: 0 0 12px 0;
       font-weight: 700;
+      line-height: 1.3;
     }}
-    .greeting-divider {{
-      margin: 10px 24px 18px 24px;
-      height: 3px;
-      background: linear-gradient(to right, #1a73e8, #90caf9);
+    .greeting-line {{
+      height: 2px;
+      background-color: #cce0ff;
+      width: 100%;
+      margin-bottom: 30px;
+      border-radius: 2px;
     }}
-    .card {{
-      margin: 0 24px 12px 24px;
-      background: #f8faff;
-      border: 1px solid #e3ecf8;
+    .info-box {{
+      background-color: #f7faff;
+      border: 1px solid #cce0ff;
       border-radius: 8px;
-      padding: 15px 16px;
-      color: #2f3640;
-      font-size: 14px;
+      padding: 20px 25px;
+      margin-bottom: 20px;
+      box-shadow: inset 0 2px 4px rgba(0, 82, 204, 0.01);
+    }}
+    .info-box p {{
+      margin: 0;
+      font-size: 16px;
       line-height: 1.75;
+      color: #2b456b;
     }}
-    .section-title {{
-      color: #1a73e8;
-      font-size: 24px;
-      line-height: 1.3;
-      font-weight: 700;
-      padding: 10px 24px 10px 24px;
-      text-align: center;
-    }}
-    .reviews-card {{
-      margin: 0 24px 14px 24px;
-      background: #f8faff;
-      border: 1px solid #e3ecf8;
-      border-radius: 8px;
-      padding: 16px 12px;
-      text-align: center;
-    }}
-    .social-title {{
-      color: #1a73e8;
-      font-size: 24px;
-      line-height: 1.3;
-      font-weight: 700;
-      padding: 10px 24px 10px 24px;
-      text-align: center;
-    }}
-    .footer-card {{
-      margin: 8px 0 0 0;
-      background: #f0f6ff;
-      border-top: 1px solid #dce8fb;
-      padding: 18px 22px;
-      color: #2f3640;
-      font-size: 14px;
-      line-height: 1.7;
-      text-align: center;
-    }}
-    .unsubscribe-bar {{
-      text-align: center;
-      padding: 12px 24px 20px 24px;
-      background: #ffffff;
-    }}
-    .unsubscribe-bar p {{
-      font-size: 11.5px;
-      color: #999999;
-      margin: 0 0 8px 0;
-      line-height: 1.5;
-    }}
-    .unsubscribe-link {{
-      font-size: 12px;
-      color: #e53935 !important;
+    .text-primary {{
+      color: #0052cc;
+      font-weight: 800;
       text-decoration: none;
-      border: 1px solid #e53935;
-      padding: 4px 14px;
-      border-radius: 20px;
+    }}
+    .section-center {{
+      text-align: center;
+      margin-top: 35px;
+    }}
+    .pill-btn {{
       display: inline-block;
+      padding: 12px 30px;
+      border-radius: 50px;
+      font-weight: 700;
+      font-size: 15px;
+      text-decoration: none;
+      color: #ffffff !important;
+    }}
+    .btn-blue {{
+      background: #1a73e8;
+    }}
+    .btn-light-blue {{
+      background: #1a73e8;
+    }}
+    .brand-container {{
+      display: block;
+      border: 1px solid #d1e0ff;
+      border-radius: 12px;
+      padding: 30px 40px;
+      margin-top: 25px;
+      background: #ffffff;
+      text-align: center;
+      max-width: 550px;
+      margin-left: auto;
+      margin-right: auto;
+      box-shadow: none;
+    }}
+    .footer-section {{
+      background-color: #f2f7ff;
+      padding: 45px 40px;
+      text-align: center;
+    }}
+    .footer-desc {{
+      font-size: 15px;
+      color: #3b5f8c;
+      line-height: 1.6;
+      margin: 0 0 35px 0;
+    }}
+    .footer-links {{
+      text-align: center;
+      margin-bottom: 25px;
+    }}
+    .footer-btn {{
+      background-color: #ffffff;
+      color: #0052cc !important;
+      border: 1px solid #0052cc;
+      padding: 14px 24px;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 8px;
+      text-decoration: none;
+      display: inline-block;
+      margin: 6px 4px;
+    }}
+    .legal-text {{
+      font-size: 12px;
+      color: #6688b3;
+      margin: 0 0 25px 0;
+    }}
+    .unsubscribe-btn {{
+      display: inline-block;
+      padding: 10px 30px;
+      border: 1.5px solid #6699cc;
+      color: #6699cc !important;
+      border-radius: 50px;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      background-color: transparent;
+    }}
+    @media (max-width: 650px) {{
+      body {{
+        padding: 18px 8px;
+      }}
+      .content-body {{
+        padding: 30px 20px;
+      }}
+      .brand-container {{
+        padding: 20px;
+      }}
+      .footer-section {{
+        padding: 35px 20px;
+      }}
+      .footer-btn {{
+        width: 100%;
+        box-sizing: border-box;
+      }}
+      .greeting {{
+        font-size: 22px;
+      }}
     }}
   </style>
 </head>
 <body>
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#eef2f7;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f0f6fc;">
     <tr>
-      <td align="center" style="padding:28px 10px;">
-        <table role="presentation" class="email-wrapper" width="600" cellspacing="0" cellpadding="0" style="width:600px;max-width:600px;background:#ffffff;">
+      <td align="center" style="padding:0;">
+        <table role="presentation" class="email-container" width="650" cellspacing="0" cellpadding="0" style="width:650px;max-width:650px;background:#ffffff;">
           <tr>
             <td class="header">
               {logo_html}
             </td>
           </tr>
           <tr>
-            <td class="greeting">
-              Hello, {safe_name}
-            </td>
+            <td><div class="main-divider"></div></td>
           </tr>
           <tr>
-            <td>
-              <div class="greeting-divider"></div>
-            </td>
-          </tr>
-          <tr>
-            <td>
-              <div class="card">
-                I hope this email finds you well and excited! I represent
-                <span style="color:#1a73e8;font-weight:700;">Vivan Web Solution Pvt. Ltd.</span>, an innovative IT Web Development company based in India, specialized in crafting exceptional web experiences. With
-                <span style="color:#1a73e8;font-weight:700;">7 years of experience</span>, we've earned the trust of clients from across
-                <span style="color:#1a73e8;font-weight:700;">10+ countries</span>.
+            <td class="content-body">
+              <h1 class="greeting">Hello {safe_name},</h1>
+              <div class="greeting-line"></div>
+
+              <div class="info-box">
+                <p>I hope this email finds you well.</p>
+              </div>
+
+              <div class="info-box">
+                <p>We represent <span class="text-primary">Vivan Web Solution Pvt. Ltd.</span>, an innovative IT and Web Development company based in India, specializing in building high-quality and scalable web applications. With <span class="text-primary">10+ years of experience</span>, we have successfully delivered projects for clients across <span class="text-primary">20+ countries</span>.</p>
+              </div>
+
+              <div class="info-box">
+                <p>Our team of <span class="text-primary">25+ skilled developers</span> focuses on delivering reliable, high-performance solutions while connecting some of India's top tech talent with global businesses. We work with modern technologies including <span class="text-primary">PHP, Laravel, Symfony, Node.js, React, Vue, and AI-driven solutions</span>.</p>
+              </div>
+
+              <div class="info-box">
+                <p>We would be excited to collaborate with you and help build a powerful, scalable web application that meets your business goals and exceeds expectations.</p>
+              </div>
+
+              <div class="info-box">
+                <p>We would be happy to discuss your requirements and explore how we can support your project.</p>
+              </div>
+
+              <div class="section-center" style="margin-top:15px;margin-bottom:25px;">
+                <span style="display:inline-block;background:linear-gradient(135deg,#1a73e8,#42a5f5);color:#ffffff;padding:7px 22px;border-radius:30px;font-size:15px;font-weight:700;letter-spacing:0.3px;margin-bottom:20px;text-transform:uppercase;">
+                  &#128197; You can schedule a meeting with me on :
+                </span>
+                <br />
+                <a href="https://calendly.com/nirav-patel-vivanwebsolution/30min" class="footer-btn" target="_blank" rel="noopener noreferrer" style="display:inline-block;font-size:16px;">
+                  Schedule a Meeting
+                </a>
+              </div>
+
+              <div class="section-center" style="margin-top:35px;">
+                <div class="pill-btn btn-blue">&#11088; Discover What Our Clients Say</div>
+                <div class="brand-container">
+                  {review_row_html or f'''
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto;width:100%;">
+                    <tr>
+                      <td align="left" style="width:33.33%;vertical-align:middle;padding:0;">{gf_html}</td>
+                      <td align="center" style="width:33.33%;vertical-align:middle;padding:0;">{upwork_html}</td>
+                      <td align="right" style="width:33.33%;vertical-align:middle;padding:0;">{clutch_html}</td>
+                    </tr>
+                  </table>
+                  '''}
+                </div>
+              </div>
+
+              <div class="section-center" style="margin-top:35px;margin-bottom:40px;">
+                <div class="pill-btn btn-light-blue">&#128279; Connect With Us On Social Media</div>
+                <div class="brand-container">
+                  {social_row_html or f'''
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto;width:100%;">
+                    <tr>
+                      <td align="left" style="width:33.33%;vertical-align:middle;padding:0;">{fb_html}</td>
+                      <td align="center" style="width:33.33%;vertical-align:middle;padding:0;">{ig_html}</td>
+                      <td align="right" style="width:33.33%;vertical-align:middle;padding:0;">{li_html}</td>
+                    </tr>
+                  </table>
+                  '''}
+                </div>
               </div>
             </td>
           </tr>
           <tr>
-            <td>
-              <div class="card">
-                Our dynamic team consists of
-                <span style="color:#1a73e8;font-weight:700;">20+ skilled developers</span> dedicated to connecting India's top
-                <span style="color:#1a73e8;font-weight:700;">3.5% tech talents</span> with global opportunities.
+            <td class="footer-section">
+              <p class="footer-desc">
+                If our services intrigue you, please don't hesitate to <a href="mailto:info@vivanwebsolution.com" class="text-primary">contact us</a>
+                for further discussions.<br />We are excited to hear from you.
+              </p>
+
+              <div class="footer-links">
+                <a href="https://vivanwebsolution.com/portfolio/" class="footer-btn" target="_blank" rel="noopener noreferrer">Discover Our Portfolio</a>
+                <a href="https://vivanwebsolution.com/vivanwebsolution.pdf" class="footer-btn" target="_blank" rel="noopener noreferrer">Company Brochure</a>
+                <a href="https://vivanwebsolution.com/" class="footer-btn" target="_blank" rel="noopener noreferrer">Visit Our Website</a>
               </div>
-            </td>
-          </tr>
-          <tr>
-            <td>
-              <div class="card">
-                We believe you are an ideal client for us, and we are enthusiastic about creating a valuable web app that surpasses your expectations.
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td class="section-title">Discover what our clients say:</td>
-          </tr>
-          <tr>
-            <td>
-              <div class="reviews-card">
-                <table role="presentation" cellspacing="0" cellpadding="0" align="center">
-                  <tr>
-                    <td style="padding:0 10px;">{gf_html}</td>
-                    <td style="padding:0 10px;">{upwork_html}</td>
-                    <td style="padding:0 10px;">{clutch_html}</td>
-                  </tr>
-                </table>
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td class="social-title">Connect with us on Social Media:</td>
-          </tr>
-          <tr>
-            <td>
-              <div class="reviews-card">
-                <table role="presentation" cellspacing="0" cellpadding="0" align="center">
-                  <tr>
-                    <td style="padding:0 10px;">{fb_html}</td>
-                    <td style="padding:0 10px;">{ig_html}</td>
-                    <td style="padding:0 10px;">{li_html}</td>
-                  </tr>
-                </table>
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td>
-              <div class="footer-card">
-                If our services intrigue you, please don't hesitate to
-                <a href="mailto:info@vivanwebsolution.com" style="color:#1a73e8;text-decoration:none;font-weight:600;">contact us</a>
-                for further discussions. We are excited to hear from you.
-              </div>
-              <div class="unsubscribe-bar">
-                <p>You received this email because you are registered with Vivan Web Solution.</p>
-                <a href="https://vivanwebsolution.com/unsubscribe/?id=%204135" class="unsubscribe-link" style="color:#e53935 !important;">Unsubscribe</a>
-              </div>
+
+              <p class="legal-text">You received this email because you are registered with Vivan Web Solution.</p>
+
+              <a href="https://vivanwebsolution.com/unsubscribe/?id=%204135" class="unsubscribe-btn" target="_blank" rel="noopener noreferrer">Unsubscribe</a>
             </td>
           </tr>
         </table>
@@ -344,7 +448,7 @@ def _load_html_template(
         screenshot_html = f'<img src="cid:{screenshot_cid}" alt="Campaign Image" style="max-width:100%;height:auto;">'
         html = html.replace("{screenshot_html}", screenshot_html)
     if logo_cid:
-        logo_html = f'<img src="cid:{logo_cid}" alt="Vivan" style="height:48px;max-width:260px;width:auto;">'
+        logo_html = f'<img src="cid:{logo_cid}" alt="Vivan" style="display:block;width:100%;max-width:280px;height:auto;margin:0 auto;border:0;">'
         html = html.replace("{logo_html}", logo_html)
     return html
 
@@ -403,6 +507,7 @@ def _build_message(
     logo_cid: str = "campaign_logo",
     asset_paths: dict[str, str] | None = None,
     asset_cids: dict[str, str] | None = None,
+    attachment_paths: list[str] | None = None,
 ) -> EmailMessage:
     msg = EmailMessage()
     msg["To"] = to_addr
@@ -455,6 +560,18 @@ def _build_message(
                 data = fh.read()
             html_part = msg.get_payload()[-1]
             html_part.add_related(data, maintype=maintype, subtype=subtype, cid=f"<{cid}>")
+    if attachment_paths:
+        for rel_path in attachment_paths:
+            path = Path(rel_path)
+            if not path.exists():
+                continue
+            ctype, _ = mimetypes.guess_type(str(path))
+            maintype, subtype = ("application", "octet-stream")
+            if ctype and "/" in ctype:
+                maintype, subtype = ctype.split("/", 1)
+            with path.open("rb") as fh:
+                data = fh.read()
+            msg.add_attachment(data, maintype=maintype, subtype=subtype, filename=path.name)
     return msg
 
 
@@ -483,11 +600,19 @@ def _dedupe_key(campaign_id: str, email: str) -> str:
     return f"{campaign_id.strip().lower()}|{email.strip().lower()}"
 
 
-def _connect_smtp(host: str, port: int, user: str, password: str, use_ssl: bool, use_tls: bool):
+def _connect_smtp(
+    host: str,
+    port: int,
+    user: str,
+    password: str,
+    use_ssl: bool,
+    use_tls: bool,
+    timeout_seconds: float = 180.0,
+):
     if use_ssl:
-        smtp = smtplib.SMTP_SSL(host, port, context=ssl.create_default_context(), timeout=30)
+        smtp = smtplib.SMTP_SSL(host, port, context=ssl.create_default_context(), timeout=timeout_seconds)
     else:
-        smtp = smtplib.SMTP(host, port, timeout=30)
+        smtp = smtplib.SMTP(host, port, timeout=timeout_seconds)
         smtp.ehlo()
         if use_tls:
             smtp.starttls(context=ssl.create_default_context())
@@ -500,7 +625,11 @@ def main():
     load_dotenv()
 
     parser = argparse.ArgumentParser(description="Send campaign email to companies stored in DB.")
-    parser.add_argument("--subject", required=True, help="Email subject line.")
+    parser.add_argument(
+        "--subject",
+        default="Regarding Web Development Services",
+        help="Email subject line.",
+    )
     parser.add_argument("--source", choices=["clutch", "goodfirms"], help="Filter companies by source.")
     parser.add_argument("--country", help="Filter companies by country.")
     parser.add_argument("--limit", type=int, default=None, help="Max companies from DB before dedupe.")
@@ -534,6 +663,7 @@ def main():
     smtp_reply_to = (os.getenv("SMTP_REPLY_TO") or "").strip() or None
     smtp_use_ssl = (os.getenv("SMTP_USE_SSL") or "0").strip() in {"1", "true", "True", "yes", "YES"}
     smtp_use_tls = (os.getenv("SMTP_USE_TLS") or "1").strip() in {"1", "true", "True", "yes", "YES"}
+    smtp_timeout = float((os.getenv("SMTP_TIMEOUT_SECONDS") or "180").strip())
 
     if args.test_email:
         test_email = args.test_email.strip().lower()
@@ -572,6 +702,12 @@ def main():
     logo_cid = "campaign_logo"
     default_logo = Path("vivan.png")
     logo_path = str(default_logo) if default_logo.exists() else None
+    default_pdf = Path("vivanwebsolution.pdf")
+    attachment_paths = [str(default_pdf)] if default_pdf.exists() else []
+    if attachment_paths:
+        print(f"[MAIL] Attaching PDF: {default_pdf.name}")
+    else:
+        print(f"[MAIL] Warning: {default_pdf.name} not found, emails will be sent without attachment.")
     asset_paths = {
         "goodfirms": "goodfirms.png",
         "upwork": "upwork.png",
@@ -618,6 +754,7 @@ def main():
                 password=smtp_pass,
                 use_ssl=smtp_use_ssl,
                 use_tls=smtp_use_tls,
+                timeout_seconds=smtp_timeout,
             )
         except Exception as err:
             failed += len(batch)
@@ -655,6 +792,7 @@ def main():
                         logo_cid=logo_cid,
                         asset_paths=asset_paths,
                         asset_cids=asset_cids,
+                        attachment_paths=attachment_paths or None,
                     )
                     smtp.send_message(msg)
                     send_history.add(dedupe_key)
