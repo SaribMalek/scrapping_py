@@ -20,8 +20,16 @@ CREATE TABLE IF NOT EXISTS `companies` (
     `website_url`  TEXT         DEFAULT NULL,
     `phone`        VARCHAR(150) DEFAULT NULL,
     `email`        VARCHAR(255) DEFAULT NULL,
+    `email_sent`   TINYINT(1)   NOT NULL DEFAULT 0,
+    `email_sent_at` DATETIME    DEFAULT NULL,
+    `email_tracking_token` VARCHAR(64) DEFAULT NULL,
+    `email_opened` TINYINT(1)   NOT NULL DEFAULT 0,
+    `email_opened_at` DATETIME  DEFAULT NULL,
+    `email_last_opened_at` DATETIME DEFAULT NULL,
+    `email_open_count` INT      NOT NULL DEFAULT 0,
     `scraped_at`   DATETIME     DEFAULT NULL,
-    UNIQUE KEY `uniq_source_name` (`source`, `company_name`(180))
+    UNIQUE KEY `uniq_source_name` (`source`, `company_name`(180)),
+    UNIQUE KEY `uniq_email_tracking_token` (`email_tracking_token`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 """
 
@@ -80,10 +88,92 @@ def init_db():
         cursor.execute(
             "ALTER TABLE companies ADD UNIQUE KEY uniq_source_name (source, company_name(180));"
         )
+    _ensure_email_tracking_columns(cursor)
     conn.commit()
     cursor.close()
     conn.close()
     print("[DB] Database and table ready.")
+
+
+def _ensure_email_tracking_columns(cursor) -> None:
+    cursor.execute("SHOW COLUMNS FROM companies LIKE 'email_sent';")
+    if not cursor.fetchone():
+        cursor.execute(
+            "ALTER TABLE companies ADD COLUMN email_sent TINYINT(1) NOT NULL DEFAULT 0 AFTER email;"
+        )
+    cursor.execute("SHOW COLUMNS FROM companies LIKE 'email_sent_at';")
+    if not cursor.fetchone():
+        cursor.execute(
+            "ALTER TABLE companies ADD COLUMN email_sent_at DATETIME DEFAULT NULL AFTER email_sent;"
+        )
+    cursor.execute("SHOW COLUMNS FROM companies LIKE 'email_tracking_token';")
+    if not cursor.fetchone():
+        cursor.execute(
+            "ALTER TABLE companies ADD COLUMN email_tracking_token VARCHAR(64) DEFAULT NULL AFTER email_sent_at;"
+        )
+    cursor.execute("SHOW COLUMNS FROM companies LIKE 'email_opened';")
+    if not cursor.fetchone():
+        cursor.execute(
+            "ALTER TABLE companies ADD COLUMN email_opened TINYINT(1) NOT NULL DEFAULT 0 AFTER email_tracking_token;"
+        )
+    cursor.execute("SHOW COLUMNS FROM companies LIKE 'email_opened_at';")
+    if not cursor.fetchone():
+        cursor.execute(
+            "ALTER TABLE companies ADD COLUMN email_opened_at DATETIME DEFAULT NULL AFTER email_opened;"
+        )
+    cursor.execute("SHOW COLUMNS FROM companies LIKE 'email_last_opened_at';")
+    if not cursor.fetchone():
+        cursor.execute(
+            "ALTER TABLE companies ADD COLUMN email_last_opened_at DATETIME DEFAULT NULL AFTER email_opened_at;"
+        )
+    cursor.execute("SHOW COLUMNS FROM companies LIKE 'email_open_count';")
+    if not cursor.fetchone():
+        cursor.execute(
+            "ALTER TABLE companies ADD COLUMN email_open_count INT NOT NULL DEFAULT 0 AFTER email_last_opened_at;"
+        )
+    cursor.execute(
+        """
+        SELECT COUNT(1)
+        FROM information_schema.statistics
+        WHERE table_schema = %s
+          AND table_name = 'companies'
+          AND index_name = 'uniq_email_tracking_token'
+        """,
+        (DB_CONFIG["database"],),
+    )
+    has_tracking_unique = (cursor.fetchone() or [0])[0] > 0
+    if not has_tracking_unique:
+        cursor.execute(
+            "ALTER TABLE companies ADD UNIQUE KEY uniq_email_tracking_token (email_tracking_token);"
+        )
+
+
+def ensure_email_tracking_columns() -> None:
+    conn = get_connection()
+    cursor = conn.cursor()
+    _ensure_email_tracking_columns(cursor)
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+
+def reset_email_flags() -> int:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        UPDATE companies
+        SET email_sent = 0,
+            email_sent_at = NULL
+        WHERE COALESCE(email_sent, 0) <> 0
+           OR email_sent_at IS NOT NULL
+        """
+    )
+    affected = cursor.rowcount
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return int(affected)
 
 
 def _clean(value):

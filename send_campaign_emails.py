@@ -14,12 +14,13 @@ import re
 import smtplib
 import ssl
 import time
+import uuid
 from email.message import EmailMessage
 from pathlib import Path
 
 from dotenv import load_dotenv
 
-from database import get_connection
+from database import ensure_email_tracking_columns, get_connection, reset_email_flags
 
 EMAIL_PATTERN = re.compile(
     r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}",
@@ -57,6 +58,7 @@ def _default_html(
     company_name: str,
     logo_cid: str | None = None,
     asset_cids: dict[str, str] | None = None,
+    tracking_pixel_html: str = "",
 ) -> str:
     safe_name = company_name.strip() or "Team"
     asset_cids = asset_cids or {}
@@ -401,7 +403,7 @@ def _default_html(
   </table>
 </body>
 </html>
-"""
+""".replace("</body>", f"{tracking_pixel_html}</body>")
 
 def _screenshot_html(company_name: str, screenshot_cid: str) -> str:
     safe_name = company_name.strip() or "Team"
@@ -437,11 +439,20 @@ def _load_html_template(
     screenshot_cid: str | None = None,
     logo_cid: str | None = None,
     asset_cids: dict[str, str] | None = None,
+    tracking_pixel_html: str = "",
 ) -> str:
     if not template_path:
         if screenshot_cid:
-            return _screenshot_html(company_name, screenshot_cid=screenshot_cid)
-        return _default_html(company_name, logo_cid=logo_cid, asset_cids=asset_cids)
+            return _inject_tracking_pixel(
+                _screenshot_html(company_name, screenshot_cid=screenshot_cid),
+                tracking_pixel_html,
+            )
+        return _default_html(
+            company_name,
+            logo_cid=logo_cid,
+            asset_cids=asset_cids,
+            tracking_pixel_html=tracking_pixel_html,
+        )
     text = Path(template_path).read_text(encoding="utf-8")
     html = text.replace("{company_name}", company_name.strip() or "Team")
     if screenshot_cid:
@@ -450,14 +461,14 @@ def _load_html_template(
     if logo_cid:
         logo_html = f'<img src="cid:{logo_cid}" alt="Vivan" style="display:block;width:100%;max-width:280px;height:auto;margin:0 auto;border:0;">'
         html = html.replace("{logo_html}", logo_html)
-    return html
+    return _inject_tracking_pixel(html, tracking_pixel_html)
 
 
-def _load_targets(source: str | None, country: str | None, limit: int | None) -> list[tuple[str, str]]:
+def _load_targets(source: str | None, country: str | None, limit: int | None) -> list[tuple[int, str, str]]:
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
 
-    clauses = ["email IS NOT NULL", "TRIM(email) <> ''"]
+    clauses = ["email IS NOT NULL", "TRIM(email) <> ''", "COALESCE(email_sent, 0) = 0"]
     params: list[str] = []
 
     if source:
@@ -468,7 +479,7 @@ def _load_targets(source: str | None, country: str | None, limit: int | None) ->
         params.append(country)
 
     sql = (
-        "SELECT company_name, email FROM companies "
+        "SELECT id, company_name, email FROM companies "
         f"WHERE {' AND '.join(clauses)} "
         "ORDER BY id ASC"
     )
@@ -482,16 +493,62 @@ def _load_targets(source: str | None, country: str | None, limit: int | None) ->
     conn.close()
 
     seen = set()
-    out: list[tuple[str, str]] = []
+    out: list[tuple[int, str, str]] = []
     for row in rows:
+        company_id = int(row["id"])
         company_name = (row.get("company_name") or "").strip() or "Team"
         for email in _extract_emails(row.get("email") or ""):
             key = email.lower()
             if key in seen:
                 continue
             seen.add(key)
-            out.append((company_name, email))
+            out.append((company_id, company_name, email))
     return out
+
+
+def _inject_tracking_pixel(html: str, tracking_pixel_html: str) -> str:
+    if not tracking_pixel_html:
+        return html
+    marker = "</body>"
+    lower_html = html.lower()
+    idx = lower_html.rfind(marker)
+    if idx >= 0:
+        return html[:idx] + tracking_pixel_html + html[idx:]
+    return html + tracking_pixel_html
+
+
+def _generate_tracking_token() -> str:
+    return uuid.uuid4().hex
+
+
+def _build_tracking_pixel_html(base_url: str | None, token: str | None, email: str | None) -> str:
+    base = (base_url or "").strip()
+    recipient_email = (email or "").strip()
+    if not base or not token or not recipient_email:
+        return ""
+    separator = "&" if "?" in base else "?"
+    src = f"{base}{separator}e={recipient_email}&t={token}"
+    return (
+        f'<img src="{src}" alt="" width="1" height="1" '
+        'style="display:block;width:1px;height:1px;border:0;opacity:0;" />'
+    )
+
+
+def _mark_email_sent(company_id: int) -> None:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        UPDATE companies
+        SET email_sent = 1,
+            email_sent_at = NOW()
+        WHERE id = %s
+        """,
+        (int(company_id),),
+    )
+    conn.commit()
+    cursor.close()
+    conn.close()
 
 
 def _build_message(
@@ -623,6 +680,7 @@ def _connect_smtp(
 
 def main():
     load_dotenv()
+    ensure_email_tracking_columns()
 
     parser = argparse.ArgumentParser(description="Send campaign email to companies stored in DB.")
     parser.add_argument(
@@ -652,8 +710,17 @@ def main():
         default="",
         help="Optional stable campaign ID for dedupe. Default uses normalized subject.",
     )
+    parser.add_argument(
+        "--reset-email-flags",
+        action="store_true",
+        help="Reset DB email_sent/email_sent_at flags before selecting recipients.",
+    )
     parser.add_argument("--dry-run", action="store_true", help="Print targets without sending.")
     args = parser.parse_args()
+
+    if args.reset_email_flags:
+        reset_count = reset_email_flags()
+        print(f"[MAIL] Reset DB email flags on {reset_count} rows.")
 
     smtp_host = (os.getenv("SMTP_HOST") or "").strip()
     smtp_port = int((os.getenv("SMTP_PORT") or "587").strip())
@@ -664,12 +731,16 @@ def main():
     smtp_use_ssl = (os.getenv("SMTP_USE_SSL") or "0").strip() in {"1", "true", "True", "yes", "YES"}
     smtp_use_tls = (os.getenv("SMTP_USE_TLS") or "1").strip() in {"1", "true", "True", "yes", "YES"}
     smtp_timeout = float((os.getenv("SMTP_TIMEOUT_SECONDS") or "180").strip())
+    tracking_base_url = (
+        os.getenv("EMAIL_TRACKING_BASE_URL")
+        or "https://moore-come-heating-algebra.trycloudflare.com/email_open_tracker.php"
+    ).strip()
 
     if args.test_email:
         test_email = args.test_email.strip().lower()
         if not _is_valid_email(test_email):
             raise SystemExit(f"[MAIL] Invalid --test-email value: {args.test_email}")
-        targets = [("Team", test_email)]
+        targets = [(0, "Team", test_email)]
     else:
         targets = _load_targets(args.source, args.country, args.limit)
     if not targets:
@@ -677,7 +748,7 @@ def main():
         return
 
     print(f"[MAIL] Total unique recipients: {len(targets)}")
-    for i, (company_name, email) in enumerate(targets[:10], start=1):
+    for i, (_, company_name, email) in enumerate(targets[:10], start=1):
         print(f"  [{i}] {company_name} <{email}>")
     if len(targets) > 10:
         print(f"  ... and {len(targets) - 10} more")
@@ -727,14 +798,15 @@ def main():
     sent = 0
     failed = 0
     skipped_duplicate = 0
-    filtered_targets: list[tuple[str, str]] = []
+    filtered_targets: list[tuple[int, str, str]] = []
 
-    for company_name, email in targets:
-        key = _dedupe_key(campaign_id, email)
-        if key in send_history:
-            skipped_duplicate += 1
-            continue
-        filtered_targets.append((company_name, email))
+    for company_id, company_name, email in targets:
+        if args.test_email:
+            key = _dedupe_key(campaign_id, email)
+            if key in send_history:
+                skipped_duplicate += 1
+                continue
+        filtered_targets.append((company_id, company_name, email))
 
     if skipped_duplicate:
         print(f"[MAIL] Skipping already-sent recipients: {skipped_duplicate}")
@@ -762,14 +834,20 @@ def main():
             continue
 
         try:
-            for company_name, email in batch:
+            for company_id, company_name, email in batch:
                 try:
                     dedupe_key = _dedupe_key(campaign_id, email)
+                    tracking_token = None
+                    tracking_pixel_html = ""
+                    if tracking_base_url:
+                        tracking_token = _generate_tracking_token()
+                        tracking_pixel_html = _build_tracking_pixel_html(tracking_base_url, tracking_token, email)
                     html_body = _load_html_template(
                         args.template_file,
                         company_name=company_name,
                         logo_cid=logo_cid if logo_path else None,
                         asset_cids=asset_cids,
+                        tracking_pixel_html=tracking_pixel_html,
                     )
                     if args.screenshot_path:
                         html_body = _load_html_template(
@@ -778,6 +856,7 @@ def main():
                             screenshot_cid=screenshot_cid,
                             logo_cid=logo_cid if logo_path else None,
                             asset_cids=asset_cids,
+                            tracking_pixel_html=tracking_pixel_html,
                         )
                     msg = _build_message(
                         from_addr=smtp_from,
@@ -795,6 +874,8 @@ def main():
                         attachment_paths=attachment_paths or None,
                     )
                     smtp.send_message(msg)
+                    if company_id > 0:
+                        _mark_email_sent(company_id)
                     send_history.add(dedupe_key)
                     _append_send_history(args.dedupe_history_file, dedupe_key)
                     sent += 1
