@@ -1,4 +1,4 @@
-"""
+﻿"""
 send_campaign_emails.py
 
 Bulk-send a personalized HTML campaign email to companies stored in MySQL.
@@ -14,12 +14,13 @@ import re
 import smtplib
 import ssl
 import time
+import uuid
 from email.message import EmailMessage
 from pathlib import Path
 
 from dotenv import load_dotenv
 
-from database import get_connection
+from database import ensure_email_tracking_columns, get_connection, reset_email_flags
 
 EMAIL_PATTERN = re.compile(
     r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}",
@@ -57,175 +58,343 @@ def _default_html(
     company_name: str,
     logo_cid: str | None = None,
     asset_cids: dict[str, str] | None = None,
+    tracking_pixel_html: str = "",
 ) -> str:
     safe_name = company_name.strip() or "Team"
     asset_cids = asset_cids or {}
+    font_stack = "'Poppins', 'Segoe UI', Tahoma, Arial, sans-serif"
     logo_html = (
-        f'<img src="cid:{logo_cid}" alt="Vivan" style="height:54px;max-width:220px;width:auto;display:block;margin:0 auto;border:0;">'
+        f'<img src="cid:{logo_cid}" alt="Vivan Web Solution" style="display:block;width:100%;max-width:280px;height:auto;margin:0 auto;border:0;">'
         if logo_cid
-        else '<div style="font-size:34px;font-weight:700;color:#2d2d2d;line-height:1;">Vivan</div>'
+        else (
+            '<table role="presentation" cellspacing="0" cellpadding="0" align="center">'
+            '<tr>'
+            '<td style="background:linear-gradient(135deg,#0052cc 0%,#002b66 100%);color:#ffffff;font-size:26px;'
+            'font-weight:900;font-family:\'Segoe UI\',Tahoma,Arial,sans-serif;width:54px;height:54px;text-align:center;'
+            'border-radius:12px;box-shadow:0 6px 15px rgba(0,82,204,0.2);">VM</td>'
+            '<td style="padding-left:12px;text-align:left;">'
+            '<div style="font-family:\'Segoe UI\',Tahoma,Arial,sans-serif;font-size:34px;font-weight:900;color:#003380;line-height:1;">Vivan</div>'
+            '<div style="font-size:10px;color:#4d7cc7;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;">WEB SOLUTION PVT. LTD.</div>'
+            '</td>'
+            '</tr>'
+            '</table>'
+        )
+    )
+    review_row_html = (
+        f'<a href="https://www.goodfirms.co/company/vivan-web-solution-pvt-ltd" target="_blank" rel="noopener noreferrer" style="display:inline-block;text-decoration:none;">'
+        f'<img src="cid:{asset_cids["review_row"]}" alt="GoodFirms, Upwork and Clutch" style="display:block;width:100%;max-width:430px;height:auto;margin:0 auto;border:0;"></a>'
+        if asset_cids.get("review_row")
+        else None
     )
     gf_html = (
-        f'<img src="cid:{asset_cids["goodfirms"]}" alt="GoodFirms" style="height:32px;width:auto;vertical-align:middle;border:0;">'
+        f'<a href="https://www.goodfirms.co/company/vivan-web-solution-pvt-ltd" target="_blank" rel="noopener noreferrer" style="display:inline-block;text-decoration:none;">'
+        f'<img src="cid:{asset_cids["goodfirms"]}" alt="GoodFirms" style="height:30px;max-width:150px;width:auto;vertical-align:middle;border:0;"></a>'
         if asset_cids.get("goodfirms")
-        else '<span style="color:#346ea5;">GoodFirms</span>'
+        else '<a href="https://www.goodfirms.co/company/vivan-web-solution-pvt-ltd" target="_blank" rel="noopener noreferrer" style="color:#4b8bfa;text-decoration:none;font-weight:700;">GoodFirms</a>'
     )
     upwork_html = (
-        f'<img src="cid:{asset_cids["upwork"]}" alt="Upwork" style="height:26px;width:auto;vertical-align:middle;border:0;">'
+        f'<a href="https://www.upwork.com/ag/vivan/" target="_blank" rel="noopener noreferrer" style="display:inline-block;text-decoration:none;">'
+        f'<img src="cid:{asset_cids["upwork"]}" alt="Upwork" style="height:24px;max-width:112px;width:auto;vertical-align:middle;border:0;"></a>'
         if asset_cids.get("upwork")
-        else '<span style="color:#7bb340;">upwork</span>'
+        else '<a href="https://www.upwork.com/ag/vivan/" target="_blank" rel="noopener noreferrer" style="color:#6fda44;text-decoration:none;font-weight:700;">Upwork</a>'
     )
     clutch_html = (
-        f'<img src="cid:{asset_cids["clutch"]}" alt="Clutch" style="height:32px;width:auto;vertical-align:middle;border:0;">'
+        f'<a href="https://clutch.co/profile/vivan-web-solution#highlights" target="_blank" rel="noopener noreferrer" style="display:inline-block;text-decoration:none;">'
+        f'<img src="cid:{asset_cids["clutch"]}" alt="Clutch" style="height:26px;max-width:105px;width:auto;vertical-align:middle;border:0;"></a>'
         if asset_cids.get("clutch")
-        else '<span style="color:#255f66;">Clutch</span>'
+        else '<a href="https://clutch.co/profile/vivan-web-solution#highlights" target="_blank" rel="noopener noreferrer" style="color:#214f52;text-decoration:none;font-weight:900;">Clutch</a>'
+    )
+    social_row_html = (
+        f'<a href="https://www.linkedin.com/company/vivan-websolution-pvt-ltd/" target="_blank" rel="noopener noreferrer" style="display:inline-block;text-decoration:none;">'
+        f'<img src="cid:{asset_cids["social_row"]}" alt="Facebook, Instagram and LinkedIn" style="display:block;width:100%;max-width:308px;height:auto;margin:0 auto;border:0;"></a>'
+        if asset_cids.get("social_row")
+        else None
     )
     fb_html = (
-        f'<img src="cid:{asset_cids["facebook"]}" alt="Facebook" style="height:22px;width:auto;vertical-align:middle;border:0;">'
+        f'<a href="https://www.facebook.com/VivanWebSolution/" target="_blank" rel="noopener noreferrer" style="display:inline-block;text-decoration:none;">'
+        f'<img src="cid:{asset_cids["facebook"]}" alt="Facebook" style="height:22px;max-width:90px;width:auto;vertical-align:middle;border:0;"></a>'
         if asset_cids.get("facebook")
-        else '<span style="font-weight:700;color:#1b4f9c;">facebook</span>'
+        else '<a href="https://www.facebook.com/VivanWebSolution/" target="_blank" rel="noopener noreferrer" style="font-weight:700;color:#1b4f9c;text-decoration:none;">facebook</a>'
     )
     ig_html = (
-        f'<img src="cid:{asset_cids["instagram"]}" alt="Instagram" style="height:22px;width:auto;vertical-align:middle;border:0;">'
+        f'<a href="https://www.instagram.com/vivanweb/?hl=en" target="_blank" rel="noopener noreferrer" style="display:inline-block;text-decoration:none;">'
+        f'<img src="cid:{asset_cids["instagram"]}" alt="Instagram" style="height:22px;max-width:100px;width:auto;vertical-align:middle;border:0;"></a>'
         if asset_cids.get("instagram")
-        else '<span style="font-weight:700;color:#cf2e7e;">Instagram</span>'
+        else '<a href="https://www.instagram.com/vivanweb/?hl=en" target="_blank" rel="noopener noreferrer" style="font-weight:700;color:#cf2e7e;text-decoration:none;">Instagram</a>'
     )
     li_html = (
-        f'<img src="cid:{asset_cids["linkedin"]}" alt="LinkedIn" style="height:22px;width:auto;vertical-align:middle;border:0;">'
+        f'<a href="https://www.linkedin.com/company/vivan-websolution-pvt-ltd/" target="_blank" rel="noopener noreferrer" style="display:inline-block;text-decoration:none;">'
+        f'<img src="cid:{asset_cids["linkedin"]}" alt="LinkedIn" style="height:22px;max-width:90px;width:auto;vertical-align:middle;border:0;"></a>'
         if asset_cids.get("linkedin")
-        else '<span style="font-weight:700;color:#1d63ab;">LinkedIn</span>'
+        else '<a href="https://www.linkedin.com/company/vivan-websolution-pvt-ltd/" target="_blank" rel="noopener noreferrer" style="font-weight:700;color:#1d63ab;text-decoration:none;">LinkedIn</a>'
     )
     return f"""\
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vivan Web Solution Pvt. Ltd. - Newsletter</title>
+  <style>
+    body {{
+      margin: 0;
+      padding: 40px 15px;
+      background-color: #f0f6fc;
+      font-family: {font_stack};
+      color: #1e3a5f;
+    }}
+    table, td, div, p, a, span, h1, h2 {{
+      font-family: {font_stack} !important;
+    }}
+    .email-container {{
+      width: 100%;
+      max-width: 650px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 10px 40px rgba(10, 40, 90, 0.08);
+      border: 1px solid #e1eaf5;
+    }}
+    .header {{
+      text-align: center;
+      padding: 40px 20px 30px;
+      background-color: #ffffff;
+    }}
+    .main-divider {{
+      height: 4px;
+      background: linear-gradient(90deg, #0052cc 0%, #4c8bf5 100%);
+      width: 100%;
+    }}
+    .content-body {{
+      padding: 40px 50px;
+    }}
+    .greeting {{
+      color: #003380;
+      font-size: 26px;
+      margin: 0 0 12px 0;
+      font-weight: 700;
+      line-height: 1.3;
+    }}
+    .greeting-line {{
+      height: 2px;
+      background-color: #cce0ff;
+      width: 100%;
+      margin-bottom: 30px;
+      border-radius: 2px;
+    }}
+    .info-box {{
+      background-color: #f7faff;
+      border: 1px solid #cce0ff;
+      border-radius: 8px;
+      padding: 20px 25px;
+      margin-bottom: 20px;
+      box-shadow: inset 0 2px 4px rgba(0, 82, 204, 0.01);
+    }}
+    .info-box p {{
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.75;
+      color: #2b456b;
+    }}
+    .text-primary {{
+      color: #0052cc;
+      font-weight: 800;
+      text-decoration: none;
+    }}
+    .section-center {{
+      text-align: center;
+      margin-top: 35px;
+    }}
+    .pill-btn {{
+      display: inline-block;
+      padding: 12px 30px;
+      border-radius: 50px;
+      font-weight: 700;
+      font-size: 15px;
+      text-decoration: none;
+      color: #ffffff !important;
+    }}
+    .btn-blue {{
+      background: #1a73e8;
+    }}
+    .btn-light-blue {{
+      background: #1a73e8;
+    }}
+    .brand-container {{
+      display: block;
+      border: 1px solid #d1e0ff;
+      border-radius: 12px;
+      padding: 30px 40px;
+      margin-top: 25px;
+      background: #ffffff;
+      text-align: center;
+      max-width: 550px;
+      margin-left: auto;
+      margin-right: auto;
+      box-shadow: none;
+    }}
+    .footer-section {{
+      background-color: #f2f7ff;
+      padding: 45px 40px;
+      text-align: center;
+    }}
+    .footer-desc {{
+      font-size: 15px;
+      color: #3b5f8c;
+      line-height: 1.6;
+      margin: 0 0 35px 0;
+    }}
+    .footer-links {{
+      text-align: center;
+      margin-bottom: 25px;
+    }}
+    .footer-btn {{
+      background-color: #ffffff;
+      color: #0052cc !important;
+      border: 1px solid #0052cc;
+      padding: 14px 24px;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 8px;
+      text-decoration: none;
+      display: inline-block;
+      margin: 6px 4px;
+    }}
+    .legal-text {{
+      font-size: 12px;
+      color: #6688b3;
+      margin: 0 0 25px 0;
+    }}
+    .unsubscribe-btn {{
+      display: inline-block;
+      padding: 10px 30px;
+      border: 1.5px solid #6699cc;
+      color: #6699cc !important;
+      border-radius: 50px;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      background-color: transparent;
+    }}
+    @media (max-width: 650px) {{
+      body {{
+        padding: 18px 8px;
+      }}
+      .content-body {{
+        padding: 30px 20px;
+      }}
+      .brand-container {{
+        padding: 20px;
+      }}
+      .footer-section {{
+        padding: 35px 20px;
+      }}
+      .footer-btn {{
+        width: 100%;
+        box-sizing: border-box;
+      }}
+      .greeting {{
+        font-size: 22px;
+      }}
+    }}
+  </style>
 </head>
-<body style="margin:0;padding:0;background:#e9e9e9;font-family:Arial,Helvetica,sans-serif;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#e9e9e9;padding:10px 0;">
+<body>
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f0f6fc;">
     <tr>
-      <td align="center">
-        <table role="presentation" width="680" cellspacing="0" cellpadding="0" style="max-width:680px;background:#e9e9e9;">
+      <td align="center" style="padding:0;">
+        <table role="presentation" class="email-container" width="650" cellspacing="0" cellpadding="0" style="width:650px;max-width:650px;background:#ffffff;">
           <tr>
-            <td style="padding:8px 10px 10px 10px;text-align:center;">
+            <td class="header">
               {logo_html}
             </td>
           </tr>
           <tr>
-            <td style="padding:0 12px 6px 12px;">
-              <p style="margin:0;color:#1e88e5;font-size:32px;line-height:1.2;font-weight:500;">Hello, {safe_name}</p>
+            <td><div class="main-divider"></div></td>
+          </tr>
+          <tr>
+            <td class="content-body">
+              <h1 class="greeting">Hello {safe_name},</h1>
+              <div class="greeting-line"></div>
+
+              <div class="info-box">
+                <p>I hope this email finds you well.</p>
+              </div>
+
+              <div class="info-box">
+                <p>We represent <span class="text-primary">Vivan Web Solution Pvt. Ltd.</span>, an innovative IT and Web Development company based in India, specializing in building high-quality and scalable web applications. With <span class="text-primary">10+ years of experience</span>, we have successfully delivered projects for clients across <span class="text-primary">20+ countries</span>.</p>
+              </div>
+
+              <div class="info-box">
+                <p>Our team of <span class="text-primary">25+ skilled developers</span> focuses on delivering reliable, high-performance solutions while connecting some of India's top tech talent with global businesses. We work with modern technologies including <span class="text-primary">PHP, Laravel, Symfony, Node.js, React, Vue, and AI-driven solutions</span>.</p>
+              </div>
+
+              <div class="info-box">
+                <p>We would be excited to collaborate with you and help build a powerful, scalable web application that meets your business goals and exceeds expectations.</p>
+              </div>
+
+              <div class="info-box">
+                <p>We would be happy to discuss your requirements and explore how we can support your project.</p>
+              </div>
+
+              <div class="section-center" style="margin-top:15px;margin-bottom:25px;">
+                <span style="display:inline-block;background:linear-gradient(135deg,#1a73e8,#42a5f5);color:#ffffff;padding:7px 22px;border-radius:30px;font-size:15px;font-weight:700;letter-spacing:0.3px;margin-bottom:20px;text-transform:uppercase;">
+                  &#128197; You can schedule a meeting with me on :
+                </span>
+                <br />
+                <a href="https://calendly.com/nirav-patel-vivanwebsolution/30min" class="footer-btn" target="_blank" rel="noopener noreferrer" style="display:inline-block;font-size:16px;">
+                  Schedule a Meeting
+                </a>
+              </div>
+
+              <div class="section-center" style="margin-top:35px;">
+                <div class="pill-btn btn-blue">&#11088; Discover What Our Clients Say</div>
+                <div class="brand-container">
+                  {review_row_html or f'''
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto;width:100%;">
+                    <tr>
+                      <td align="left" style="width:33.33%;vertical-align:middle;padding:0;">{gf_html}</td>
+                      <td align="center" style="width:33.33%;vertical-align:middle;padding:0;">{upwork_html}</td>
+                      <td align="right" style="width:33.33%;vertical-align:middle;padding:0;">{clutch_html}</td>
+                    </tr>
+                  </table>
+                  '''}
+                </div>
+              </div>
+
+              <div class="section-center" style="margin-top:35px;margin-bottom:40px;">
+                <div class="pill-btn btn-light-blue">&#128279; Connect With Us On Social Media</div>
+                <div class="brand-container">
+                  {social_row_html or f'''
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto;width:100%;">
+                    <tr>
+                      <td align="left" style="width:33.33%;vertical-align:middle;padding:0;">{fb_html}</td>
+                      <td align="center" style="width:33.33%;vertical-align:middle;padding:0;">{ig_html}</td>
+                      <td align="right" style="width:33.33%;vertical-align:middle;padding:0;">{li_html}</td>
+                    </tr>
+                  </table>
+                  '''}
+                </div>
+              </div>
             </td>
           </tr>
           <tr>
-            <td style="padding:0 12px 10px 12px;">
-              <div style="height:3px;background:#1e88e5;"></div>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:0 12px 8px 12px;">
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f1f1f1;border-radius:3px;">
-                <tr>
-                  <td style="padding:14px;color:#323232;font-size:20px;line-height:1.6;">
-                I hope this email finds you well. I represent Vivan Web Solution Pvt. Ltd.,
-                an innovative IT web development company based in India, specialized in crafting
-                exceptional web experiences.
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:0 12px 8px 12px;">
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f1f1f1;border-radius:3px;">
-                <tr>
-                  <td style="padding:14px;color:#323232;font-size:20px;line-height:1.6;">
-                Our dynamic team consists of 20+ skilled developers dedicated to converting ideas
-                into high-performance web products.
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:0 12px 8px 12px;">
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f1f1f1;border-radius:3px;">
-                <tr>
-                  <td style="padding:14px;color:#323232;font-size:20px;line-height:1.6;">
-                We believe you are an ideal client for us, and we are enthusiastic about creating
-                a valuable web app that surpasses your expectations.
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:0 12px 8px 12px;">
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f1f1f1;border-radius:3px;">
-                <tr>
-                  <td style="padding:18px 14px;text-align:center;">
-                    <p style="margin:0 0 10px 0;color:#2b8bd8;font-size:28px;font-weight:700;">Discover what our clients say:</p>
-                    <p style="margin:0;line-height:1.1;">
-                      {gf_html}
-                      <span style="display:inline-block;width:14px;"></span>
-                      {upwork_html}
-                      <span style="display:inline-block;width:14px;"></span>
-                      {clutch_html}
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:8px 12px;color:#2b8bd8;font-size:30px;font-weight:700;">Connect with us on Social Media:</td>
-          </tr>
-          <tr>
-            <td style="padding:0 12px 8px 12px;">
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f1f1f1;border-radius:3px;">
-                <tr>
-                  <td style="padding:16px;text-align:center;color:#1e1e1e;font-size:26px;">
-                    {fb_html}
-                    <span style="display:inline-block;width:14px;"></span>
-                    {ig_html}
-                    <span style="display:inline-block;width:14px;"></span>
-                    {li_html}
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:0 12px 8px 12px;">
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f1f1f1;border-radius:3px;">
-                <tr>
-                  <td style="padding:14px;color:#323232;font-size:20px;line-height:1.6;text-align:center;">
-                    If our services intrigue you, please don't hesitate to contact us for further discussions.
-                    We are excited to hear from you.
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:4px 12px 0 12px;">
-              <a href="https://vivanwebsolution.com/portfolio"
-                 style="display:block;background:#2d8bda;color:#fff;text-decoration:none;text-align:center;padding:14px 16px;margin:0 0 8px 0;font-size:28px;border-radius:2px;">
-                 Discover Our Portfolio
-              </a>
-              <a href="https://vivanwebsolution.com/company-brochure"
-                 style="display:block;background:#2d8bda;color:#fff;text-decoration:none;text-align:center;padding:14px 16px;margin:0 0 8px 0;font-size:28px;border-radius:2px;">
-                 Company Brochure
-              </a>
-              <a href="https://vivanwebsolution.com/"
-                 style="display:block;background:#2d8bda;color:#fff;text-decoration:none;text-align:center;padding:14px 16px;margin:0;font-size:28px;border-radius:2px;">
-                 Visit Our Website
-              </a>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:14px 12px 10px 12px;text-align:center;color:#2f2f2f;font-size:14px;">
-              To stop receiving these emails, reply with "Unsubscribe".
+            <td class="footer-section">
+              <p class="footer-desc">
+                If our services intrigue you, please don't hesitate to <a href="mailto:info@vivanwebsolution.com" class="text-primary">contact us</a>
+                for further discussions.<br />We are excited to hear from you.
+              </p>
+
+              <div class="footer-links">
+                <a href="https://vivanwebsolution.com/portfolio/" class="footer-btn" target="_blank" rel="noopener noreferrer">Discover Our Portfolio</a>
+                <a href="https://vivanwebsolution.com/vivanwebsolution.pdf" class="footer-btn" target="_blank" rel="noopener noreferrer">Company Brochure</a>
+                <a href="https://vivanwebsolution.com/" class="footer-btn" target="_blank" rel="noopener noreferrer">Visit Our Website</a>
+              </div>
+
+              <p class="legal-text">You received this email because you are registered with Vivan Web Solution.</p>
+
+              <a href="https://vivanwebsolution.com/unsubscribe/?id=%204135" class="unsubscribe-btn" target="_blank" rel="noopener noreferrer">Unsubscribe</a>
             </td>
           </tr>
         </table>
@@ -234,8 +403,7 @@ def _default_html(
   </table>
 </body>
 </html>
-"""
-
+""".replace("</body>", f"{tracking_pixel_html}</body>")
 
 def _screenshot_html(company_name: str, screenshot_cid: str) -> str:
     safe_name = company_name.strip() or "Team"
@@ -243,17 +411,17 @@ def _screenshot_html(company_name: str, screenshot_cid: str) -> str:
 <!doctype html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
-<body style="margin:0;padding:20px;background:#efefef;font-family:Arial,Helvetica,sans-serif;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+<body style="margin:0;padding:0;background:#ebebeb;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#ebebeb;">
     <tr>
-      <td align="center">
-        <table role="presentation" width="680" cellspacing="0" cellpadding="0" style="max-width:680px;background:#fff;border:1px solid #ddd;">
+      <td align="center" style="padding:10px 0;">
+        <table role="presentation" width="680" cellspacing="0" cellpadding="0" style="width:680px;max-width:680px;background:#f3f3f3;">
           <tr>
-            <td style="padding:20px;color:#1f77d0;font-size:18px;">Hello, {safe_name}</td>
+            <td style="padding:10px 12px;color:#1f83d7;font-size:26px;line-height:1.25;font-weight:500;">Hello {safe_name},</td>
           </tr>
           <tr>
-            <td style="padding:0 20px 20px 20px;">
-              <img src="cid:{screenshot_cid}" alt="Campaign Image" style="width:100%;height:auto;display:block;border:0;">
+            <td style="padding:0 12px 12px 12px;">
+              <img src="cid:{screenshot_cid}" alt="Campaign Image" style="width:100%;height:auto;display:block;border:0;background:#ffffff;">
             </td>
           </tr>
         </table>
@@ -271,27 +439,36 @@ def _load_html_template(
     screenshot_cid: str | None = None,
     logo_cid: str | None = None,
     asset_cids: dict[str, str] | None = None,
+    tracking_pixel_html: str = "",
 ) -> str:
     if not template_path:
         if screenshot_cid:
-            return _screenshot_html(company_name, screenshot_cid=screenshot_cid)
-        return _default_html(company_name, logo_cid=logo_cid, asset_cids=asset_cids)
+            return _inject_tracking_pixel(
+                _screenshot_html(company_name, screenshot_cid=screenshot_cid),
+                tracking_pixel_html,
+            )
+        return _default_html(
+            company_name,
+            logo_cid=logo_cid,
+            asset_cids=asset_cids,
+            tracking_pixel_html=tracking_pixel_html,
+        )
     text = Path(template_path).read_text(encoding="utf-8")
     html = text.replace("{company_name}", company_name.strip() or "Team")
     if screenshot_cid:
         screenshot_html = f'<img src="cid:{screenshot_cid}" alt="Campaign Image" style="max-width:100%;height:auto;">'
         html = html.replace("{screenshot_html}", screenshot_html)
     if logo_cid:
-        logo_html = f'<img src="cid:{logo_cid}" alt="Vivan" style="height:48px;max-width:260px;width:auto;">'
+        logo_html = f'<img src="cid:{logo_cid}" alt="Vivan" style="display:block;width:100%;max-width:280px;height:auto;margin:0 auto;border:0;">'
         html = html.replace("{logo_html}", logo_html)
-    return html
+    return _inject_tracking_pixel(html, tracking_pixel_html)
 
 
-def _load_targets(source: str | None, country: str | None, limit: int | None) -> list[tuple[str, str]]:
+def _load_targets(source: str | None, country: str | None, limit: int | None) -> list[tuple[int, str, str]]:
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
 
-    clauses = ["email IS NOT NULL", "TRIM(email) <> ''"]
+    clauses = ["email IS NOT NULL", "TRIM(email) <> ''", "COALESCE(email_sent, 0) = 0"]
     params: list[str] = []
 
     if source:
@@ -302,7 +479,7 @@ def _load_targets(source: str | None, country: str | None, limit: int | None) ->
         params.append(country)
 
     sql = (
-        "SELECT company_name, email FROM companies "
+        "SELECT id, company_name, email FROM companies "
         f"WHERE {' AND '.join(clauses)} "
         "ORDER BY id ASC"
     )
@@ -316,16 +493,62 @@ def _load_targets(source: str | None, country: str | None, limit: int | None) ->
     conn.close()
 
     seen = set()
-    out: list[tuple[str, str]] = []
+    out: list[tuple[int, str, str]] = []
     for row in rows:
+        company_id = int(row["id"])
         company_name = (row.get("company_name") or "").strip() or "Team"
         for email in _extract_emails(row.get("email") or ""):
             key = email.lower()
             if key in seen:
                 continue
             seen.add(key)
-            out.append((company_name, email))
+            out.append((company_id, company_name, email))
     return out
+
+
+def _inject_tracking_pixel(html: str, tracking_pixel_html: str) -> str:
+    if not tracking_pixel_html:
+        return html
+    marker = "</body>"
+    lower_html = html.lower()
+    idx = lower_html.rfind(marker)
+    if idx >= 0:
+        return html[:idx] + tracking_pixel_html + html[idx:]
+    return html + tracking_pixel_html
+
+
+def _generate_tracking_token() -> str:
+    return uuid.uuid4().hex
+
+
+def _build_tracking_pixel_html(base_url: str | None, token: str | None, email: str | None) -> str:
+    base = (base_url or "").strip()
+    recipient_email = (email or "").strip()
+    if not base or not token or not recipient_email:
+        return ""
+    separator = "&" if "?" in base else "?"
+    src = f"{base}{separator}e={recipient_email}&t={token}"
+    return (
+        f'<img src="{src}" alt="" width="1" height="1" '
+        'style="display:block;width:1px;height:1px;border:0;opacity:0;" />'
+    )
+
+
+def _mark_email_sent(company_id: int) -> None:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        UPDATE companies
+        SET email_sent = 1,
+            email_sent_at = NOW()
+        WHERE id = %s
+        """,
+        (int(company_id),),
+    )
+    conn.commit()
+    cursor.close()
+    conn.close()
 
 
 def _build_message(
@@ -341,6 +564,7 @@ def _build_message(
     logo_cid: str = "campaign_logo",
     asset_paths: dict[str, str] | None = None,
     asset_cids: dict[str, str] | None = None,
+    attachment_paths: list[str] | None = None,
 ) -> EmailMessage:
     msg = EmailMessage()
     msg["To"] = to_addr
@@ -393,14 +617,59 @@ def _build_message(
                 data = fh.read()
             html_part = msg.get_payload()[-1]
             html_part.add_related(data, maintype=maintype, subtype=subtype, cid=f"<{cid}>")
+    if attachment_paths:
+        for rel_path in attachment_paths:
+            path = Path(rel_path)
+            if not path.exists():
+                continue
+            ctype, _ = mimetypes.guess_type(str(path))
+            maintype, subtype = ("application", "octet-stream")
+            if ctype and "/" in ctype:
+                maintype, subtype = ctype.split("/", 1)
+            with path.open("rb") as fh:
+                data = fh.read()
+            msg.add_attachment(data, maintype=maintype, subtype=subtype, filename=path.name)
     return msg
 
 
-def _connect_smtp(host: str, port: int, user: str, password: str, use_ssl: bool, use_tls: bool):
+def _load_send_history(path: str) -> set[str]:
+    p = Path(path)
+    if not p.exists():
+        return set()
+    lines = p.read_text(encoding="utf-8").splitlines()
+    out: set[str] = set()
+    for line in lines:
+        item = line.strip()
+        if not item:
+            continue
+        out.add(item)
+    return out
+
+
+def _append_send_history(path: str, key: str) -> None:
+    p = Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    with p.open("a", encoding="utf-8") as fh:
+        fh.write(f"{key}\n")
+
+
+def _dedupe_key(campaign_id: str, email: str) -> str:
+    return f"{campaign_id.strip().lower()}|{email.strip().lower()}"
+
+
+def _connect_smtp(
+    host: str,
+    port: int,
+    user: str,
+    password: str,
+    use_ssl: bool,
+    use_tls: bool,
+    timeout_seconds: float = 180.0,
+):
     if use_ssl:
-        smtp = smtplib.SMTP_SSL(host, port, context=ssl.create_default_context(), timeout=30)
+        smtp = smtplib.SMTP_SSL(host, port, context=ssl.create_default_context(), timeout=timeout_seconds)
     else:
-        smtp = smtplib.SMTP(host, port, timeout=30)
+        smtp = smtplib.SMTP(host, port, timeout=timeout_seconds)
         smtp.ehlo()
         if use_tls:
             smtp.starttls(context=ssl.create_default_context())
@@ -411,9 +680,14 @@ def _connect_smtp(host: str, port: int, user: str, password: str, use_ssl: bool,
 
 def main():
     load_dotenv()
+    ensure_email_tracking_columns()
 
     parser = argparse.ArgumentParser(description="Send campaign email to companies stored in DB.")
-    parser.add_argument("--subject", required=True, help="Email subject line.")
+    parser.add_argument(
+        "--subject",
+        default="Regarding Web Development Services",
+        help="Email subject line.",
+    )
     parser.add_argument("--source", choices=["clutch", "goodfirms"], help="Filter companies by source.")
     parser.add_argument("--country", help="Filter companies by country.")
     parser.add_argument("--limit", type=int, default=None, help="Max companies from DB before dedupe.")
@@ -425,8 +699,28 @@ def main():
         help="Optional local image path to embed as the main campaign screenshot.",
     )
     parser.add_argument("--from-name", default=os.getenv("SMTP_FROM_NAME", "Vivan Web Solution"))
+    parser.add_argument("--test-email", help="Send a single test email to this address.")
+    parser.add_argument(
+        "--dedupe-history-file",
+        default="output/email_send_history.log",
+        help="Skip emails already sent for the same campaign using this history file.",
+    )
+    parser.add_argument(
+        "--campaign-id",
+        default="",
+        help="Optional stable campaign ID for dedupe. Default uses normalized subject.",
+    )
+    parser.add_argument(
+        "--reset-email-flags",
+        action="store_true",
+        help="Reset DB email_sent/email_sent_at flags before selecting recipients.",
+    )
     parser.add_argument("--dry-run", action="store_true", help="Print targets without sending.")
     args = parser.parse_args()
+
+    if args.reset_email_flags:
+        reset_count = reset_email_flags()
+        print(f"[MAIL] Reset DB email flags on {reset_count} rows.")
 
     smtp_host = (os.getenv("SMTP_HOST") or "").strip()
     smtp_port = int((os.getenv("SMTP_PORT") or "587").strip())
@@ -436,14 +730,25 @@ def main():
     smtp_reply_to = (os.getenv("SMTP_REPLY_TO") or "").strip() or None
     smtp_use_ssl = (os.getenv("SMTP_USE_SSL") or "0").strip() in {"1", "true", "True", "yes", "YES"}
     smtp_use_tls = (os.getenv("SMTP_USE_TLS") or "1").strip() in {"1", "true", "True", "yes", "YES"}
+    smtp_timeout = float((os.getenv("SMTP_TIMEOUT_SECONDS") or "180").strip())
+    tracking_base_url = (
+        os.getenv("EMAIL_TRACKING_BASE_URL")
+        or "https://moore-come-heating-algebra.trycloudflare.com/email_open_tracker.php"
+    ).strip()
 
-    targets = _load_targets(args.source, args.country, args.limit)
+    if args.test_email:
+        test_email = args.test_email.strip().lower()
+        if not _is_valid_email(test_email):
+            raise SystemExit(f"[MAIL] Invalid --test-email value: {args.test_email}")
+        targets = [(0, "Team", test_email)]
+    else:
+        targets = _load_targets(args.source, args.country, args.limit)
     if not targets:
         print("[MAIL] No valid recipients found.")
         return
 
     print(f"[MAIL] Total unique recipients: {len(targets)}")
-    for i, (company_name, email) in enumerate(targets[:10], start=1):
+    for i, (_, company_name, email) in enumerate(targets[:10], start=1):
         print(f"  [{i}] {company_name} <{email}>")
     if len(targets) > 10:
         print(f"  ... and {len(targets) - 10} more")
@@ -462,10 +767,18 @@ def main():
         raise SystemExit(f"[MAIL] Missing SMTP config: {', '.join(missing)}")
 
     batch_size = max(1, int(args.batch_size))
+    campaign_id = (args.campaign_id or "").strip().lower() or args.subject.strip().lower()
+    send_history = _load_send_history(args.dedupe_history_file)
     screenshot_cid = "campaign_screenshot"
     logo_cid = "campaign_logo"
     default_logo = Path("vivan.png")
     logo_path = str(default_logo) if default_logo.exists() else None
+    default_pdf = Path("vivanwebsolution.pdf")
+    attachment_paths = [str(default_pdf)] if default_pdf.exists() else []
+    if attachment_paths:
+        print(f"[MAIL] Attaching PDF: {default_pdf.name}")
+    else:
+        print(f"[MAIL] Warning: {default_pdf.name} not found, emails will be sent without attachment.")
     asset_paths = {
         "goodfirms": "goodfirms.png",
         "upwork": "upwork.png",
@@ -484,9 +797,25 @@ def main():
     }
     sent = 0
     failed = 0
+    skipped_duplicate = 0
+    filtered_targets: list[tuple[int, str, str]] = []
 
-    for start in range(0, len(targets), batch_size):
-        batch = targets[start:start + batch_size]
+    for company_id, company_name, email in targets:
+        if args.test_email:
+            key = _dedupe_key(campaign_id, email)
+            if key in send_history:
+                skipped_duplicate += 1
+                continue
+        filtered_targets.append((company_id, company_name, email))
+
+    if skipped_duplicate:
+        print(f"[MAIL] Skipping already-sent recipients: {skipped_duplicate}")
+    if not filtered_targets:
+        print("[MAIL] Nothing to send after duplicate filtering.")
+        return
+
+    for start in range(0, len(filtered_targets), batch_size):
+        batch = filtered_targets[start:start + batch_size]
         print(f"[MAIL] Sending batch {start + 1}-{start + len(batch)}...")
         smtp = None
         try:
@@ -497,14 +826,28 @@ def main():
                 password=smtp_pass,
                 use_ssl=smtp_use_ssl,
                 use_tls=smtp_use_tls,
+                timeout_seconds=smtp_timeout,
             )
-            for company_name, email in batch:
+        except Exception as err:
+            failed += len(batch)
+            print(f"[MAIL] Batch connection failed ({len(batch)} recipients): {err}")
+            continue
+
+        try:
+            for company_id, company_name, email in batch:
                 try:
+                    dedupe_key = _dedupe_key(campaign_id, email)
+                    tracking_token = None
+                    tracking_pixel_html = ""
+                    if tracking_base_url:
+                        tracking_token = _generate_tracking_token()
+                        tracking_pixel_html = _build_tracking_pixel_html(tracking_base_url, tracking_token, email)
                     html_body = _load_html_template(
                         args.template_file,
                         company_name=company_name,
                         logo_cid=logo_cid if logo_path else None,
                         asset_cids=asset_cids,
+                        tracking_pixel_html=tracking_pixel_html,
                     )
                     if args.screenshot_path:
                         html_body = _load_html_template(
@@ -513,6 +856,7 @@ def main():
                             screenshot_cid=screenshot_cid,
                             logo_cid=logo_cid if logo_path else None,
                             asset_cids=asset_cids,
+                            tracking_pixel_html=tracking_pixel_html,
                         )
                     msg = _build_message(
                         from_addr=smtp_from,
@@ -527,8 +871,13 @@ def main():
                         logo_cid=logo_cid,
                         asset_paths=asset_paths,
                         asset_cids=asset_cids,
-                    smtp.send_message(msg)
+                        attachment_paths=attachment_paths or None,
                     )
+                    smtp.send_message(msg)
+                    if company_id > 0:
+                        _mark_email_sent(company_id)
+                    send_history.add(dedupe_key)
+                    _append_send_history(args.dedupe_history_file, dedupe_key)
                     sent += 1
                     print(f"  [OK] {email}")
                 except Exception as err:
@@ -541,12 +890,14 @@ def main():
                 except Exception:
                     pass
 
-        if start + batch_size < len(targets):
+        if start + batch_size < len(filtered_targets):
             time.sleep(max(0.0, args.pause_seconds))
 
-    print(f"[MAIL] Done. Sent={sent}, Failed={failed}, Total={len(targets)}")
+    print(
+        f"[MAIL] Done. Sent={sent}, Failed={failed}, SkippedDuplicate={skipped_duplicate}, Total={len(targets)}"
+    )
 
 
 if __name__ == "__main__":
     main()
-  
+
