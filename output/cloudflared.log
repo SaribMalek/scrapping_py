@@ -26,3 +26,16 @@
 {"level":"error","error":"lookup region1.v2.argotunnel.com: i/o timeout","time":"2026-03-11T08:57:31Z","message":"Failed to refresh DNS local resolver"}
 {"level":"error","error":"lookup region1.v2.argotunnel.com: i/o timeout","time":"2026-03-11T09:57:37Z","message":"Failed to refresh DNS local resolver"}
 {"level":"error","error":"lookup region1.v2.argotunnel.com: i/o timeout","time":"2026-03-11T10:02:42Z","message":"Failed to refresh DNS local resolver"}
+{"level":"error","error":"lookup region1.v2.argotunnel.com: i/o timeout","time":"2026-03-11T10:22:47Z","message":"Failed to refresh DNS local resolver"}
+{"level":"error","error":"lookup region1.v2.argotunnel.com: i/o timeout","time":"2026-03-11T10:52:52Z","message":"Failed to refresh DNS local resolver"}
+{"level":"error","error":"lookup region1.v2.argotunnel.com: i/o timeout","time":"2026-03-11T10:57:57Z","message":"Failed to refresh DNS local resolver"}
+{"level":"error","error":"lookup region1.v2.argotunnel.com: i/o timeout","time":"2026-03-11T11:23:03Z","message":"Failed to refresh DNS local resolver"}
+{"level":"info","time":"2026-03-11T11:59:17Z","message":"Initiating graceful shutdown due to signal terminated ..."}
+{"level":"error","event":0,"ip":"198.41.192.67","connIndex":0,"error":"Application error 0x0 (remote)","time":"2026-03-11T11:59:18Z","message":"failed to run the datagram handler"}
+{"level":"error","event":0,"ip":"198.41.192.67","connIndex":0,"error":"accept stream listener encountered a failure while serving","time":"2026-03-11T11:59:18Z","message":"failed to serve tunnel connection"}
+{"level":"error","event":0,"ip":"198.41.192.67","connIndex":0,"error":"accept stream listener encountered a failure while serving","time":"2026-03-11T11:59:18Z","message":"Serve tunnel error"}
+{"level":"info","event":0,"ip":"198.41.192.67","connIndex":0,"time":"2026-03-11T11:59:18Z","message":"Retrying connection in up to 1s"}
+{"level":"error","connIndex":0,"time":"2026-03-11T11:59:18Z","message":"Connection terminated"}
+{"level":"error","time":"2026-03-11T11:59:18Z","message":"no more connections active and exiting"}
+{"level":"info","time":"2026-03-11T11:59:18Z","message":"Tunnel server stopped"}
+{"level":"info","time":"2026-03-11T11:59:18Z","message":"Metrics server stopped"}
