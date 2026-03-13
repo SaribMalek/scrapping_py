@@ -517,6 +517,15 @@ def _inject_tracking_pixel(html: str, tracking_pixel_html: str) -> str:
     return html + tracking_pixel_html
 
 
+def _inject_body_prefix(html: str, body_prefix_html: str) -> str:
+    if not body_prefix_html:
+        return html
+    match = re.search(r"<body\b[^>]*>", html, flags=re.IGNORECASE)
+    if not match:
+        return body_prefix_html + html
+    return html[:match.end()] + body_prefix_html + html[match.end():]
+
+
 def _generate_tracking_token() -> str:
     return uuid.uuid4().hex
 
@@ -678,6 +687,105 @@ def _connect_smtp(
     return smtp
 
 
+def _send_completion_copy(
+    smtp_host: str,
+    smtp_port: int,
+    smtp_user: str,
+    smtp_pass: str,
+    smtp_use_ssl: bool,
+    smtp_use_tls: bool,
+    smtp_timeout: float,
+    smtp_from: str,
+    smtp_reply_to: str | None,
+    subject: str,
+    from_name: str | None,
+    template_file: str | None,
+    screenshot_path: str | None,
+    logo_path: str | None,
+    asset_paths: dict[str, str],
+    asset_cids: dict[str, str],
+    attachment_paths: list[str] | None,
+    completion_copy_email: str | None,
+    sent: int,
+    failed: int,
+    skipped_duplicate: int,
+    campaign_id: str,
+) -> bool:
+    completion_email = (completion_copy_email or "").strip().lower()
+    if not completion_email:
+        return False
+    if not _is_valid_email(completion_email):
+        print(f"[MAIL] Skipping completion copy. Invalid email: {completion_copy_email}")
+        return False
+
+    screenshot_cid = "campaign_screenshot"
+    logo_cid = "campaign_logo"
+    summary_html = (
+        "<div style=\"margin:0 0 24px 0;padding:16px 18px;border:1px solid #cce0ff;"
+        "border-radius:8px;background:#f7fbff;color:#24446b;font-family:Arial,Helvetica,sans-serif;\">"
+        "<strong style=\"color:#003380;\">Campaign summary</strong><br>"
+        f"Campaign ID: {campaign_id}<br>"
+        f"Sent: {sent}<br>"
+        f"Failed: {failed}<br>"
+        f"Skipped duplicate: {skipped_duplicate}"
+        "</div>"
+    )
+    html_body = _inject_body_prefix(_load_html_template(
+        template_file,
+        company_name="Sarib",
+        logo_cid=logo_cid if logo_path else None,
+        asset_cids=asset_cids,
+    ), summary_html)
+    if screenshot_path:
+        html_body = _inject_body_prefix(_load_html_template(
+            template_file,
+            company_name="Sarib",
+            screenshot_cid=screenshot_cid,
+            logo_cid=logo_cid if logo_path else None,
+            asset_cids=asset_cids,
+        ), summary_html)
+
+    msg = _build_message(
+        from_addr=smtp_from,
+        to_addr=completion_email,
+        subject=f"{subject} [Campaign Copy]",
+        html_body=html_body,
+        from_name=from_name,
+        reply_to=smtp_reply_to,
+        screenshot_path=screenshot_path,
+        screenshot_cid=screenshot_cid,
+        logo_path=logo_path,
+        logo_cid=logo_cid,
+        asset_paths=asset_paths,
+        asset_cids=asset_cids,
+        attachment_paths=attachment_paths,
+    )
+
+    smtp = None
+    try:
+        smtp = _connect_smtp(
+            host=smtp_host,
+            port=smtp_port,
+            user=smtp_user,
+            password=smtp_pass,
+            use_ssl=smtp_use_ssl,
+            use_tls=smtp_use_tls,
+            timeout_seconds=smtp_timeout,
+        )
+        smtp.send_message(msg)
+        print(f"[MAIL] Completion copy sent to {completion_email}")
+        return True
+    except Exception as err:
+        print(f"[MAIL] Failed to send completion copy to {completion_email}: {err}")
+        return False
+    finally:
+        if smtp is not None:
+            try:
+                smtp.quit()
+            except Exception:
+                pass
+
+
 def main():
     load_dotenv()
     ensure_email_tracking_columns()
@@ -709,6 +817,11 @@ def main():
         "--campaign-id",
         default="",
         help="Optional stable campaign ID for dedupe. Default uses normalized subject.",
+    )
+    parser.add_argument(
+        "--completion-copy-email",
+        default=os.getenv("CAMPAIGN_COMPLETION_COPY_EMAIL", "sarib.malek@vivanwebsolution.com"),
+        help="Send one final campaign copy to this email after the full run completes.",
     )
     parser.add_argument(
         "--reset-email-flags",
@@ -895,6 +1008,30 @@ def main():
 
     print(
         f"[MAIL] Done. Sent={sent}, Failed={failed}, SkippedDuplicate={skipped_duplicate}, Total={len(targets)}"
+    )
+    _send_completion_copy(
+        smtp_host=smtp_host,
+        smtp_port=smtp_port,
+        smtp_user=smtp_user,
+        smtp_pass=smtp_pass,
+        smtp_use_ssl=smtp_use_ssl,
+        smtp_use_tls=smtp_use_tls,
+        smtp_timeout=smtp_timeout,
+        smtp_from=smtp_from,
+        smtp_reply_to=smtp_reply_to,
+        subject=args.subject,
+        from_name=args.from_name,
+        template_file=args.template_file,
+        screenshot_path=args.screenshot_path,
+        logo_path=logo_path,
+        asset_paths=asset_paths,
+        asset_cids=asset_cids,
+        attachment_paths=attachment_paths or None,
+        completion_copy_email=args.completion_copy_email,
+        sent=sent,
+        failed=failed,
+        skipped_duplicate=skipped_duplicate,
+        campaign_id=campaign_id,
     )
 
 
