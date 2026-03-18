@@ -1,4 +1,4 @@
-﻿"""
+"""
 send_campaign_emails.py
 
 Bulk-send a personalized HTML campaign email to companies stored in MySQL.
@@ -16,6 +16,7 @@ import ssl
 import time
 import uuid
 from email.message import EmailMessage
+from email.utils import make_msgid, formatdate
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -62,7 +63,53 @@ def _default_html(
 ) -> str:
     safe_name = company_name.strip() or "Team"
     asset_cids = asset_cids or {}
-    font_stack = "'Poppins', 'Segoe UI', Tahoma, Arial, sans-serif"
+    
+    import random
+    
+    # Professional color themes (Light Background + High Contrast Bold Theme Color)
+    # These are curated pairs to ensure perfect readability and a premium feel
+    color_themes = [
+        {"bg": "#f0f8ff", "theme": "#0052cc"}, # Alice Blue & Corporate Blue
+        {"bg": "#f8f9fa", "theme": "#212529"}, # Off-White & Charcoal Text
+        {"bg": "#f5f3ff", "theme": "#5b21b6"}, # Soft Violet & Deep Purple
+        {"bg": "#ecfdf5", "theme": "#047857"}, # Mint Forest & Emerald Green
+        {"bg": "#fffbeb", "theme": "#b45309"}, # Warm Ivory & Amber/Gold
+        {"bg": "#fdf4ff", "theme": "#be185d"}, # Blush Pink & Magenta
+        {"bg": "#f0fdf4", "theme": "#15803d"}, # Honeydew & Evergreen
+        {"bg": "#eff6ff", "theme": "#4338ca"}, # Ice Blue & Indigo
+        {"bg": "#fef2f2", "theme": "#b91c1c"}, # Light Rose & Crimson Red
+        {"bg": "#fdf8f6", "theme": "#c2410c"}, # Light Peach & Burnt Orange
+    ]
+    chosen_theme = random.choice(color_themes)
+    bg_color = chosen_theme["bg"]
+    theme_color = chosen_theme["theme"]
+
+    # Random font family
+    font_options = [
+        {
+            "css": "'Poppins', 'Segoe UI', Tahoma, Arial, sans-serif",
+            "url": "https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap",
+        },
+        {
+            "css": "'Inter', 'Helvetica Neue', Arial, sans-serif",
+            "url": "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap",
+        },
+        {
+            "css": "'Nunito', 'Segoe UI', Arial, sans-serif",
+            "url": "https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap",
+        },
+        {
+            "css": "'Lato', 'Helvetica Neue', Arial, sans-serif",
+            "url": "https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap",
+        },
+        {
+            "css": "'Raleway', 'Segoe UI', Arial, sans-serif",
+            "url": "https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700&display=swap",
+        },
+    ]
+    chosen_font = random.choice(font_options)
+    font_stack = chosen_font["css"]
+    google_font_url = chosen_font["url"]
     logo_html = (
         f'<img src="cid:{logo_cid}" alt="Vivan Web Solution" style="display:block;width:100%;max-width:280px;height:auto;margin:0 auto;border:0;">'
         if logo_cid
@@ -135,11 +182,12 @@ def _default_html(
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Vivan Web Solution Pvt. Ltd. - Newsletter</title>
+  <link href="{google_font_url}" rel="stylesheet">
   <style>
     body {{
       margin: 0;
       padding: 40px 15px;
-      background-color: #f0f6fc;
+      background-color: #ffffff;
       font-family: {font_stack};
       color: #1e3a5f;
     }}
@@ -150,7 +198,7 @@ def _default_html(
       width: 100%;
       max-width: 650px;
       margin: 0 auto;
-      background-color: #ffffff;
+      background-color: {bg_color};
       border-radius: 8px;
       overflow: hidden;
       box-shadow: 0 10px 40px rgba(10, 40, 90, 0.08);
@@ -159,18 +207,18 @@ def _default_html(
     .header {{
       text-align: center;
       padding: 40px 20px 30px;
-      background-color: #ffffff;
+      background-color: transparent;
     }}
     .main-divider {{
       height: 4px;
-      background: linear-gradient(90deg, #0052cc 0%, #4c8bf5 100%);
+      background: {theme_color};
       width: 100%;
     }}
     .content-body {{
       padding: 40px 50px;
     }}
     .greeting {{
-      color: #003380;
+      color: {theme_color};
       font-size: 26px;
       margin: 0 0 12px 0;
       font-weight: 700;
@@ -178,13 +226,13 @@ def _default_html(
     }}
     .greeting-line {{
       height: 2px;
-      background-color: #cce0ff;
+      background-color: {theme_color};
       width: 100%;
       margin-bottom: 30px;
       border-radius: 2px;
     }}
     .info-box {{
-      background-color: #f7faff;
+      background-color: rgba(255, 255, 255, 0.4);
       border: 1px solid #cce0ff;
       border-radius: 8px;
       padding: 20px 25px;
@@ -195,10 +243,10 @@ def _default_html(
       margin: 0;
       font-size: 16px;
       line-height: 1.75;
-      color: #2b456b;
+      color: inherit;
     }}
     .text-primary {{
-      color: #0052cc;
+      color: {theme_color};
       font-weight: 800;
       text-decoration: none;
     }}
@@ -215,11 +263,8 @@ def _default_html(
       text-decoration: none;
       color: #ffffff !important;
     }}
-    .btn-blue {{
-      background: #1a73e8;
-    }}
-    .btn-light-blue {{
-      background: #1a73e8;
+    .btn-theme {{
+      background: {theme_color};
     }}
     .brand-container {{
       display: block;
@@ -251,8 +296,8 @@ def _default_html(
     }}
     .footer-btn {{
       background-color: #ffffff;
-      color: #0052cc !important;
-      border: 1px solid #0052cc;
+      color: {theme_color} !important;
+      border: 1px solid {theme_color};
       padding: 14px 24px;
       font-size: 14px;
       font-weight: 600;
@@ -269,8 +314,8 @@ def _default_html(
     .unsubscribe-btn {{
       display: inline-block;
       padding: 10px 30px;
-      border: 1.5px solid #6699cc;
-      color: #6699cc !important;
+      border: 1.5px solid {theme_color};
+      color: {theme_color} !important;
       border-radius: 50px;
       text-decoration: none;
       font-size: 13px;
@@ -301,10 +346,10 @@ def _default_html(
   </style>
 </head>
 <body>
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f0f6fc;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#ffffff; font-family:{font_stack};">
     <tr>
       <td align="center" style="padding:0;">
-        <table role="presentation" class="email-container" width="650" cellspacing="0" cellpadding="0" style="width:650px;max-width:650px;background:#ffffff;">
+        <table role="presentation" class="email-container" width="650" cellspacing="0" cellpadding="0" style="width:650px;max-width:650px;background:{bg_color};">
           <tr>
             <td class="header">
               {logo_html}
@@ -339,7 +384,7 @@ def _default_html(
               </div>
 
               <div class="section-center" style="margin-top:15px;margin-bottom:25px;">
-                <span style="display:inline-block;background:linear-gradient(135deg,#1a73e8,#42a5f5);color:#ffffff;padding:7px 22px;border-radius:30px;font-size:15px;font-weight:700;letter-spacing:0.3px;margin-bottom:20px;text-transform:uppercase;">
+                <span style="display:inline-block;background:{theme_color};color:#ffffff;padding:7px 22px;border-radius:30px;font-size:15px;font-weight:700;letter-spacing:0.3px;margin-bottom:20px;text-transform:uppercase;">
                   &#128197; You can schedule a meeting with me on :
                 </span>
                 <br />
@@ -349,7 +394,7 @@ def _default_html(
               </div>
 
               <div class="section-center" style="margin-top:35px;">
-                <div class="pill-btn btn-blue">&#11088; Discover What Our Clients Say</div>
+                <div class="pill-btn btn-theme">&#11088; Discover What Our Clients Say</div>
                 <div class="brand-container">
                   {review_row_html or f'''
                   <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto;width:100%;">
@@ -364,7 +409,7 @@ def _default_html(
               </div>
 
               <div class="section-center" style="margin-top:35px;margin-bottom:40px;">
-                <div class="pill-btn btn-light-blue">&#128279; Connect With Us On Social Media</div>
+                <div class="pill-btn btn-theme">&#128279; Connect With Us On Social Media</div>
                 <div class="brand-container">
                   {social_row_html or f'''
                   <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto;width:100%;">
@@ -382,7 +427,7 @@ def _default_html(
           <tr>
             <td class="footer-section">
               <p class="footer-desc">
-                If our services intrigue you, please don't hesitate to <a href="mailto:info@vivanwebsolution.com" class="text-primary">contact us</a>
+                If our services intrigue you, please don't hesitate to <a href="mailto:info@vivanwebsolution.com" class="text-primary" style="color:{theme_color};font-weight:700;">contact us</a>
                 for further discussions.<br />We are excited to hear from you.
               </p>
 
@@ -461,6 +506,48 @@ def _load_html_template(
     if logo_cid:
         logo_html = f'<img src="cid:{logo_cid}" alt="Vivan" style="display:block;width:100%;max-width:280px;height:auto;margin:0 auto;border:0;">'
         html = html.replace("{logo_html}", logo_html)
+    else:
+        html = html.replace("{logo_html}", '<div style="display:inline-flex;align-items:center;justify-content:center;gap:15px;"><div style="background:linear-gradient(135deg,#0052cc 0%,#002b66 100%);color:white;font-size:32px;font-weight:900;font-family:\'Roboto\',sans-serif;width:65px;height:65px;display:flex;align-items:center;justify-content:center;border-radius:16px;box-shadow:0 6px 15px rgba(0,82,204,0.2);">VM</div><div style="text-align:left;display:flex;flex-direction:column;justify-content:center;"><h2 style="font-family:\'Roboto\',sans-serif;font-size:42px;font-weight:900;color:#003380;margin:0;line-height:1;letter-spacing:-1px;">Vivan</h2><span style="font-size:11px;color:#4d7cc7;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;margin-top:4px;">WEB SOLUTION PVT. LTD.</span></div></div>')
+
+    import random
+
+    # ── Random background colour (very light, professional) ──────────────────
+    bg_colors = [
+        "#f0f6fc", "#f5f7fa", "#f8f9fa", "#f4f6f8",
+        "#fdf6ff", "#fff8f0", "#f0fff4", "#f0f4ff",
+        "#fff5f5", "#f5f0ff",
+    ]
+    bg_color = random.choice(bg_colors)
+
+    # ── Random font family (all web-safe or Google Fonts) ────────────────────
+    font_options = [
+        {
+            "css": "'Poppins', 'Segoe UI', Arial, sans-serif",
+            "url": "https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap",
+        },
+        {
+            "css": "'Inter', 'Helvetica Neue', Arial, sans-serif",
+            "url": "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap",
+        },
+        {
+            "css": "'Nunito', 'Segoe UI', Arial, sans-serif",
+            "url": "https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap",
+        },
+        {
+            "css": "'Lato', 'Helvetica Neue', Arial, sans-serif",
+            "url": "https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap",
+        },
+        {
+            "css": "'Raleway', 'Segoe UI', Arial, sans-serif",
+            "url": "https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700&display=swap",
+        },
+    ]
+    chosen_font = random.choice(font_options)
+
+    html = html.replace("{bg_color}", bg_color)
+    html = html.replace("{font_family}", chosen_font["css"])
+    html = html.replace("{google_font_url}", chosen_font["url"])
+
     return _inject_tracking_pixel(html, tracking_pixel_html)
 
 
@@ -579,9 +666,20 @@ def _build_message(
     msg["To"] = to_addr
     msg["From"] = f"{from_name} <{from_addr}>" if from_name else from_addr
     msg["Subject"] = subject
+    
+    domain = from_addr.split('@')[-1] if '@' in from_addr else "vivanwebsolution.com"
+    msg["Message-ID"] = make_msgid(domain=domain)
+    msg["Date"] = formatdate(localtime=True)
+    
     if reply_to:
         msg["Reply-To"] = reply_to
-    msg.set_content("Please view this email in HTML mode.")
+    fallback_text = (
+        "Hello,\n\n"
+        "We have sent an HTML email. If you cannot view it, please enable HTML or contact us at info@vivanwebsolution.com.\n\n"
+        "Best regards,\n"
+        "Vivan Web Solution Pvt. Ltd."
+    )
+    msg.set_content(fallback_text)
     msg.add_alternative(html_body, subtype="html")
 
     if screenshot_path:
@@ -787,6 +885,7 @@ def _send_completion_copy(
 
 
 def main():
+
     load_dotenv()
     ensure_email_tracking_columns()
 
@@ -808,6 +907,7 @@ def main():
     )
     parser.add_argument("--from-name", default=os.getenv("SMTP_FROM_NAME", "Vivan Web Solution"))
     parser.add_argument("--test-email", help="Send a single test email to this address.")
+    parser.add_argument("--test-company", default="Team", help="Company name to use for the test email.")
     parser.add_argument(
         "--dedupe-history-file",
         default="output/email_send_history.log",
@@ -845,17 +945,17 @@ def main():
     smtp_use_tls = (os.getenv("SMTP_USE_TLS") or "1").strip() in {"1", "true", "True", "yes", "YES"}
     smtp_timeout = float((os.getenv("SMTP_TIMEOUT_SECONDS") or "180").strip())
     tracking_base_url = (
-        os.getenv("EMAIL_TRACKING_BASE_URL")
-        or "https://moore-come-heating-algebra.trycloudflare.com/email_open_tracker.php"
+        os.getenv("EMAIL_TRACKING_BASE_URL") or ""
     ).strip()
 
     if args.test_email:
         test_email = args.test_email.strip().lower()
         if not _is_valid_email(test_email):
             raise SystemExit(f"[MAIL] Invalid --test-email value: {args.test_email}")
-        targets = [(0, "Team", test_email)]
+        targets = [(0, args.test_company, test_email)]
     else:
         targets = _load_targets(args.source, args.country, args.limit)
+        
     if not targets:
         print("[MAIL] No valid recipients found.")
         return
@@ -914,7 +1014,7 @@ def main():
     filtered_targets: list[tuple[int, str, str]] = []
 
     for company_id, company_name, email in targets:
-        if args.test_email:
+        if not args.test_email:
             key = _dedupe_key(campaign_id, email)
             if key in send_history:
                 skipped_duplicate += 1

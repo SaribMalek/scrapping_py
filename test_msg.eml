@@ -1,0 +1,458 @@
+To: b@b.com
+From: a@a.com
+Subject: Sub
+MIME-Version: 1.0
+Content-Type: multipart/alternative;
+ boundary="===============9210596176683291529=="
+
+--===============9210596176683291529==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+Please view this email in HTML mode.
+
+--===============9210596176683291529==
+MIME-Version: 1.0
+Content-Type: multipart/related;
+ boundary="===============8190514044531439713=="
+
+--===============8190514044531439713==
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+
+<!doctype html>
+<html lang=3D"en">
+<head>
+  <meta charset=3D"utf-8" />
+  <meta name=3D"viewport" content=3D"width=3Ddevice-width, initial-scale=3D1"=
+ />
+  <title>Vivan Web Solution Pvt. Ltd. - Newsletter</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 40px 15px;
+      background-color: #f0f6fc;
+      font-family: 'Poppins', 'Segoe UI', Tahoma, Arial, sans-serif;
+      color: #1e3a5f;
+    }
+    table, td, div, p, a, span, h1, h2 {
+      font-family: 'Poppins', 'Segoe UI', Tahoma, Arial, sans-serif !importan=
+t;
+    }
+    .email-container {
+      width: 100%;
+      max-width: 650px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 10px 40px rgba(10, 40, 90, 0.08);
+      border: 1px solid #e1eaf5;
+    }
+    .header {
+      text-align: center;
+      padding: 40px 20px 30px;
+      background-color: #ffffff;
+    }
+    .main-divider {
+      height: 4px;
+      background: linear-gradient(90deg, #0052cc 0%, #4c8bf5 100%);
+      width: 100%;
+    }
+    .content-body {
+      padding: 40px 50px;
+    }
+    .greeting {
+      color: #003380;
+      font-size: 26px;
+      margin: 0 0 12px 0;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+    .greeting-line {
+      height: 2px;
+      background-color: #cce0ff;
+      width: 100%;
+      margin-bottom: 30px;
+      border-radius: 2px;
+    }
+    .info-box {
+      background-color: #f7faff;
+      border: 1px solid #cce0ff;
+      border-radius: 8px;
+      padding: 20px 25px;
+      margin-bottom: 20px;
+      box-shadow: inset 0 2px 4px rgba(0, 82, 204, 0.01);
+    }
+    .info-box p {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.75;
+      color: #2b456b;
+    }
+    .text-primary {
+      color: #0052cc;
+      font-weight: 800;
+      text-decoration: none;
+    }
+    .section-center {
+      text-align: center;
+      margin-top: 35px;
+    }
+    .pill-btn {
+      display: inline-block;
+      padding: 12px 30px;
+      border-radius: 50px;
+      font-weight: 700;
+      font-size: 15px;
+      text-decoration: none;
+      color: #ffffff !important;
+    }
+    .btn-blue {
+      background: #1a73e8;
+    }
+    .btn-light-blue {
+      background: #1a73e8;
+    }
+    .brand-container {
+      display: block;
+      border: 1px solid #d1e0ff;
+      border-radius: 12px;
+      padding: 30px 40px;
+      margin-top: 25px;
+      background: #ffffff;
+      text-align: center;
+      max-width: 550px;
+      margin-left: auto;
+      margin-right: auto;
+      box-shadow: none;
+    }
+    .footer-section {
+      background-color: #f2f7ff;
+      padding: 45px 40px;
+      text-align: center;
+    }
+    .footer-desc {
+      font-size: 15px;
+      color: #3b5f8c;
+      line-height: 1.6;
+      margin: 0 0 35px 0;
+    }
+    .footer-links {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+    .footer-btn {
+      background-color: #ffffff;
+      color: #0052cc !important;
+      border: 1px solid #0052cc;
+      padding: 14px 24px;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 8px;
+      text-decoration: none;
+      display: inline-block;
+      margin: 6px 4px;
+    }
+    .legal-text {
+      font-size: 12px;
+      color: #6688b3;
+      margin: 0 0 25px 0;
+    }
+    .unsubscribe-btn {
+      display: inline-block;
+      padding: 10px 30px;
+      border: 1.5px solid #6699cc;
+      color: #6699cc !important;
+      border-radius: 50px;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      background-color: transparent;
+    }
+    @media (max-width: 650px) {
+      body {
+        padding: 18px 8px;
+      }
+      .content-body {
+        padding: 30px 20px;
+      }
+      .brand-container {
+        padding: 20px;
+      }
+      .footer-section {
+        padding: 35px 20px;
+      }
+      .footer-btn {
+        width: 100%;
+        box-sizing: border-box;
+      }
+      .greeting {
+        font-size: 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <table role=3D"presentation" width=3D"100%" cellspacing=3D"0" cellpadding=
+=3D"0" style=3D"background:#f0f6fc;">
+    <tr>
+      <td align=3D"center" style=3D"padding:0;">
+        <table role=3D"presentation" class=3D"email-container" width=3D"650" =
+cellspacing=3D"0" cellpadding=3D"0" style=3D"width:650px;max-width:650px;back=
+ground:#ffffff;">
+          <tr>
+            <td class=3D"header">
+              <table role=3D"presentation" cellspacing=3D"0" cellpadding=3D"0=
+" align=3D"center"><tr><td style=3D"background:linear-gradient(135deg,#0052cc=
+ 0%,#002b66 100%);color:#ffffff;font-size:26px;font-weight:900;font-family:'S=
+egoe UI',Tahoma,Arial,sans-serif;width:54px;height:54px;text-align:center;bor=
+der-radius:12px;box-shadow:0 6px 15px rgba(0,82,204,0.2);">VM</td><td style=
+=3D"padding-left:12px;text-align:left;"><div style=3D"font-family:'Segoe UI',=
+Tahoma,Arial,sans-serif;font-size:34px;font-weight:900;color:#003380;line-hei=
+ght:1;">Vivan</div><div style=3D"font-size:10px;color:#4d7cc7;font-weight:600=
+;letter-spacing:1.2px;text-transform:uppercase;">WEB SOLUTION PVT. LTD.</div>=
+</td></tr></table>
+            </td>
+          </tr>
+          <tr>
+            <td><div class=3D"main-divider"></div></td>
+          </tr>
+          <tr>
+            <td class=3D"content-body">
+              <h1 class=3D"greeting">Hello Test,</h1>
+              <div class=3D"greeting-line"></div>
+
+              <div class=3D"info-box">
+                <p>I hope this email finds you well.</p>
+              </div>
+
+              <div class=3D"info-box">
+                <p>We represent <span class=3D"text-primary">Vivan Web Soluti=
+on Pvt. Ltd.</span>, an innovative IT and Web Development company based in In=
+dia, specializing in building high-quality and scalable web applications. Wit=
+h <span class=3D"text-primary">10+ years of experience</span>, we have succes=
+sfully delivered projects for clients across <span class=3D"text-primary">20+=
+ countries</span>.</p>
+              </div>
+
+              <div class=3D"info-box">
+                <p>Our team of <span class=3D"text-primary">25+ skilled devel=
+opers</span> focuses on delivering reliable, high-performance solutions while=
+ connecting some of India's top tech talent with global businesses. We work w=
+ith modern technologies including <span class=3D"text-primary">PHP, Laravel, =
+Symfony, Node.js, React, Vue, and AI-driven solutions</span>.</p>
+              </div>
+
+              <div class=3D"info-box">
+                <p>We would be excited to collaborate with you and help build=
+ a powerful, scalable web application that meets your business goals and exce=
+eds expectations.</p>
+              </div>
+
+              <div class=3D"info-box">
+                <p>We would be happy to discuss your requirements and explore=
+ how we can support your project.</p>
+              </div>
+
+              <div class=3D"section-center" style=3D"margin-top:15px;margin-b=
+ottom:25px;">
+                <span style=3D"display:inline-block;background:linear-gradien=
+t(135deg,#1a73e8,#42a5f5);color:#ffffff;padding:7px 22px;border-radius:30px;f=
+ont-size:15px;font-weight:700;letter-spacing:0.3px;margin-bottom:20px;text-tr=
+ansform:uppercase;">
+                  &#128197; You can schedule a meeting with me on :
+                </span>
+                <br />
+                <a href=3D"https://calendly.com/nirav-patel-vivanwebsolution/=
+30min" class=3D"footer-btn" target=3D"_blank" rel=3D"noopener noreferrer" sty=
+le=3D"display:inline-block;font-size:16px;">
+                  Schedule a Meeting
+                </a>
+              </div>
+
+              <div class=3D"section-center" style=3D"margin-top:35px;">
+                <div class=3D"pill-btn btn-blue">&#11088; Discover What Our C=
+lients Say</div>
+                <div class=3D"brand-container">
+                 =20
+                  <table role=3D"presentation" cellspacing=3D"0" cellpadding=
+=3D"0" border=3D"0" align=3D"center" style=3D"margin:0 auto;width:100%;">
+                    <tr>
+                      <td align=3D"left" style=3D"width:33.33%;vertical-align=
+:middle;padding:0;"><a href=3D"https://www.goodfirms.co/company/vivan-web-sol=
+ution-pvt-ltd" target=3D"_blank" rel=3D"noopener noreferrer" style=3D"display=
+:inline-block;text-decoration:none;"><img src=3D"cid:asset_goodfirms" alt=3D"=
+GoodFirms" style=3D"height:30px;max-width:150px;width:auto;vertical-align:mid=
+dle;border:0;"></a></td>
+                      <td align=3D"center" style=3D"width:33.33%;vertical-ali=
+gn:middle;padding:0;"><a href=3D"https://www.upwork.com/ag/vivan/" target=3D"=
+_blank" rel=3D"noopener noreferrer" style=3D"color:#6fda44;text-decoration:no=
+ne;font-weight:700;">Upwork</a></td>
+                      <td align=3D"right" style=3D"width:33.33%;vertical-alig=
+n:middle;padding:0;"><a href=3D"https://clutch.co/profile/vivan-web-solution#=
+highlights" target=3D"_blank" rel=3D"noopener noreferrer" style=3D"color:#214=
+f52;text-decoration:none;font-weight:900;">Clutch</a></td>
+                    </tr>
+                  </table>
+                 =20
+                </div>
+              </div>
+
+              <div class=3D"section-center" style=3D"margin-top:35px;margin-b=
+ottom:40px;">
+                <div class=3D"pill-btn btn-light-blue">&#128279; Connect With=
+ Us On Social Media</div>
+                <div class=3D"brand-container">
+                 =20
+                  <table role=3D"presentation" cellspacing=3D"0" cellpadding=
+=3D"0" border=3D"0" align=3D"center" style=3D"margin:0 auto;width:100%;">
+                    <tr>
+                      <td align=3D"left" style=3D"width:33.33%;vertical-align=
+:middle;padding:0;"><a href=3D"https://www.facebook.com/VivanWebSolution/" ta=
+rget=3D"_blank" rel=3D"noopener noreferrer" style=3D"font-weight:700;color:#1=
+b4f9c;text-decoration:none;">facebook</a></td>
+                      <td align=3D"center" style=3D"width:33.33%;vertical-ali=
+gn:middle;padding:0;"><a href=3D"https://www.instagram.com/vivanweb/?hl=3Den"=
+ target=3D"_blank" rel=3D"noopener noreferrer" style=3D"font-weight:700;color=
+:#cf2e7e;text-decoration:none;">Instagram</a></td>
+                      <td align=3D"right" style=3D"width:33.33%;vertical-alig=
+n:middle;padding:0;"><a href=3D"https://www.linkedin.com/company/vivan-websol=
+ution-pvt-ltd/" target=3D"_blank" rel=3D"noopener noreferrer" style=3D"font-w=
+eight:700;color:#1d63ab;text-decoration:none;">LinkedIn</a></td>
+                    </tr>
+                  </table>
+                 =20
+                </div>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class=3D"footer-section">
+              <p class=3D"footer-desc">
+                If our services intrigue you, please don't hesitate to <a hre=
+f=3D"mailto:info@vivanwebsolution.com" class=3D"text-primary">contact us</a>
+                for further discussions.<br />We are excited to hear from you.
+              </p>
+
+              <div class=3D"footer-links">
+                <a href=3D"https://vivanwebsolution.com/portfolio/" class=3D"=
+footer-btn" target=3D"_blank" rel=3D"noopener noreferrer">Discover Our Portfo=
+lio</a>
+                <a href=3D"https://vivanwebsolution.com/vivanwebsolution.pdf"=
+ class=3D"footer-btn" target=3D"_blank" rel=3D"noopener noreferrer">Company B=
+rochure</a>
+                <a href=3D"https://vivanwebsolution.com/" class=3D"footer-btn=
+" target=3D"_blank" rel=3D"noopener noreferrer">Visit Our Website</a>
+              </div>
+
+              <p class=3D"legal-text">You received this email because you are=
+ registered with Vivan Web Solution.</p>
+
+              <a href=3D"https://vivanwebsolution.com/unsubscribe/?id=3D%2041=
+35" class=3D"unsubscribe-btn" target=3D"_blank" rel=3D"noopener noreferrer">U=
+nsubscribe</a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+
+--===============8190514044531439713==
+Content-Type: image/png
+Content-Transfer-Encoding: base64
+Content-ID: <asset_goodfirms>
+MIME-Version: 1.0
+Content-Disposition: inline
+
+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
+
+--===============8190514044531439713==--
+
+--===============9210596176683291529==--
