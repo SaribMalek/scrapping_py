@@ -12,7 +12,9 @@ import mimetypes
 import os
 import re
 import smtplib
+import socket
 import ssl
+import subprocess
 import time
 import uuid
 from email.message import EmailMessage
@@ -27,6 +29,26 @@ EMAIL_PATTERN = re.compile(
     r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}",
     re.IGNORECASE,
 )
+ROLE_BASED_LOCAL_PARTS = {
+    "admin",
+    "billing",
+    "careers",
+    "career",
+    "contact",
+    "enquiry",
+    "help",
+    "hello",
+    "hr",
+    "info",
+    "inquiry",
+    "marketing",
+    "office",
+    "sales",
+    "service",
+    "services",
+    "support",
+    "team",
+}
 
 
 def _is_valid_email(email: str) -> bool:
@@ -38,6 +60,182 @@ def _is_valid_email(email: str) -> bool:
     if email.endswith((".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".js", ".css")):
         return False
     return True
+
+
+def _extract_email_domain(email: str) -> str:
+    email = (email or "").strip().lower()
+    if "@" not in email:
+        return ""
+    return email.rsplit("@", 1)[1].strip()
+
+
+def _extract_email_local_part(email: str) -> str:
+    email = (email or "").strip().lower()
+    if "@" not in email:
+        return ""
+    return email.split("@", 1)[0].strip()
+
+
+def _is_role_based_email(email: str) -> bool:
+    local_part = _extract_email_local_part(email)
+    return local_part in ROLE_BASED_LOCAL_PARTS
+
+
+def _check_email_domain_exists(email: str, cache: dict[str, tuple[bool, str]]) -> tuple[bool, str]:
+    domain = _extract_email_domain(email)
+    if not domain:
+        return False, "missing_domain"
+    if domain in cache:
+        return cache[domain]
+    try:
+        socket.getaddrinfo(domain, None)
+        cache[domain] = (True, "")
+    except socket.gaierror:
+        cache[domain] = (False, f"domain_not_resolved:{domain}")
+    except Exception as err:
+        cache[domain] = (False, f"domain_lookup_failed:{type(err).__name__}")
+    return cache[domain]
+
+
+def _lookup_mx_hosts(domain: str, cache: dict[str, list[str]]) -> list[str]:
+    normalized_domain = (domain or "").strip().lower()
+    if not normalized_domain:
+        return []
+    if normalized_domain in cache:
+        return cache[normalized_domain]
+
+    hosts: list[tuple[int, str]] = []
+    try:
+        result = subprocess.run(
+            ["nslookup", "-type=mx", normalized_domain],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+        output = "\n".join([result.stdout or "", result.stderr or ""])
+        patterns = [
+            re.compile(r"mail exchanger = ([^\s]+)", re.IGNORECASE),
+            re.compile(r"MX preference = (\d+), mail exchanger = ([^\s]+)", re.IGNORECASE),
+        ]
+        for line in output.splitlines():
+            stripped = line.strip()
+            if not stripped:
+                continue
+            matched = False
+            for pattern in patterns:
+                match = pattern.search(stripped)
+                if not match:
+                    continue
+                matched = True
+                if len(match.groups()) == 1:
+                    priority = 0
+                    host = match.group(1)
+                else:
+                    priority = int(match.group(1))
+                    host = match.group(2)
+                hosts.append((priority, host.rstrip(".")))
+                break
+            if matched:
+                continue
+    except Exception:
+        pass
+
+    ordered_hosts = [host for _, host in sorted(hosts, key=lambda item: item[0])]
+    if not ordered_hosts:
+        ordered_hosts = [normalized_domain]
+    cache[normalized_domain] = ordered_hosts
+    return ordered_hosts
+
+
+def _extract_smtp_response_text(message: bytes | str | None) -> str:
+    if isinstance(message, bytes):
+        return message.decode("utf-8", errors="replace").strip()
+    return str(message or "").strip()
+
+
+def _classify_smtp_probe_failure(code: int, message: bytes | str | None) -> str | None:
+    detail_text = _extract_smtp_response_text(message).replace("\n", " ")
+    lower_text = detail_text.lower()
+    invalid_markers = [
+        "user does not exist",
+        "user unknown",
+        "unknown user",
+        "address not found",
+        "mailbox unavailable",
+        "mailbox not found",
+        "does not exist",
+        "recipient rejected",
+        "blocked",
+        "blacklisted",
+        "access denied",
+    ]
+    if code in {550, 551, 552, 553, 554} or any(marker in lower_text for marker in invalid_markers):
+        return f"smtp_probe_{code}:{detail_text}"[:255]
+    return None
+
+
+def _check_email_recipient_exists(
+    email: str,
+    mail_from: str,
+    mx_cache: dict[str, list[str]],
+    probe_cache: dict[str, tuple[bool, str]],
+    timeout_seconds: float,
+) -> tuple[bool, str]:
+    normalized_email = (email or "").strip().lower()
+    if not normalized_email:
+        return False, "missing_email"
+    if normalized_email in probe_cache:
+        return probe_cache[normalized_email]
+
+    domain = _extract_email_domain(normalized_email)
+    mx_hosts = _lookup_mx_hosts(domain, mx_cache)
+    if not mx_hosts:
+        probe_cache[normalized_email] = (False, f"mx_not_found:{domain}")
+        return probe_cache[normalized_email]
+
+    last_probe_error = ""
+    for mx_host in mx_hosts[:3]:
+        smtp = None
+        try:
+            smtp = smtplib.SMTP(mx_host, 25, timeout=min(timeout_seconds, 20.0))
+            smtp.ehlo_or_helo_if_needed()
+            try:
+                if smtp.has_extn("starttls"):
+                    smtp.starttls(context=ssl.create_default_context())
+                    smtp.ehlo()
+            except Exception:
+                pass
+
+            mail_code, mail_message = smtp.mail(mail_from)
+            if mail_code >= 500:
+                invalid_reason = _classify_smtp_probe_failure(mail_code, mail_message)
+                if invalid_reason:
+                    probe_cache[normalized_email] = (False, invalid_reason)
+                    return probe_cache[normalized_email]
+                continue
+
+            rcpt_code, rcpt_message = smtp.rcpt(normalized_email)
+            invalid_reason = _classify_smtp_probe_failure(rcpt_code, rcpt_message)
+            if invalid_reason:
+                probe_cache[normalized_email] = (False, invalid_reason)
+                return probe_cache[normalized_email]
+            if rcpt_code in {250, 251}:
+                probe_cache[normalized_email] = (True, "")
+                return probe_cache[normalized_email]
+            last_probe_error = f"smtp_probe_unexpected:{mx_host}:{rcpt_code}"
+        except Exception as err:
+            last_probe_error = f"smtp_probe_failed:{mx_host}:{type(err).__name__}"
+            continue
+        finally:
+            if smtp is not None:
+                try:
+                    smtp.quit()
+                except Exception:
+                    pass
+
+    probe_cache[normalized_email] = (False, last_probe_error or f"smtp_probe_inconclusive:{domain}")
+    return probe_cache[normalized_email]
 
 
 def _extract_emails(raw: str) -> list[str]:
@@ -555,7 +753,12 @@ def _load_targets(source: str | None, country: str | None, limit: int | None) ->
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
 
-    clauses = ["email IS NOT NULL", "TRIM(email) <> ''", "COALESCE(email_sent, 0) = 0"]
+    clauses = [
+        "email IS NOT NULL",
+        "TRIM(email) <> ''",
+        "COALESCE(email_sent, 0) = 0",
+        "COALESCE(email_valid, 1) = 1",
+    ]
     params: list[str] = []
 
     if source:
@@ -637,7 +840,10 @@ def _mark_email_sent(company_id: int) -> None:
         """
         UPDATE companies
         SET email_sent = 1,
-            email_sent_at = NOW()
+            email_sent_at = NOW(),
+            email_valid = 1,
+            email_invalid_reason = NULL,
+            email_validated_at = NOW()
         WHERE id = %s
         """,
         (int(company_id),),
@@ -645,6 +851,65 @@ def _mark_email_sent(company_id: int) -> None:
     conn.commit()
     cursor.close()
     conn.close()
+
+
+def _mark_email_invalid(company_id: int, reason: str) -> None:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        UPDATE companies
+        SET email_valid = 0,
+            email_invalid_reason = %s,
+            email_validated_at = NOW()
+        WHERE id = %s
+        """,
+        ((reason or "invalid_email")[:255], int(company_id)),
+    )
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+
+def _mark_email_valid(company_id: int) -> None:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        UPDATE companies
+        SET email_valid = 1,
+            email_invalid_reason = NULL,
+            email_validated_at = NOW()
+        WHERE id = %s
+        """,
+        (int(company_id),),
+    )
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+
+def _extract_invalid_reason(err: Exception) -> str | None:
+    if isinstance(err, smtplib.SMTPRecipientsRefused):
+        recipients = getattr(err, "recipients", {}) or {}
+        if recipients:
+            _, details = next(iter(recipients.items()))
+            if isinstance(details, tuple) and len(details) >= 2:
+                smtp_message = details[1]
+                if isinstance(smtp_message, bytes):
+                    smtp_message = smtp_message.decode("utf-8", errors="replace")
+                detail_text = str(smtp_message).strip().replace("\n", " ")
+                return f"recipient_refused:{detail_text}"[:255]
+        return "recipient_refused"
+    if isinstance(err, smtplib.SMTPResponseException):
+        smtp_message = err.smtp_error
+        if isinstance(smtp_message, bytes):
+            smtp_message = smtp_message.decode("utf-8", errors="replace")
+        detail_text = str(smtp_message).strip().replace("\n", " ")
+        lower_text = detail_text.lower()
+        if err.smtp_code in {550, 551, 552, 553, 554} or "user unknown" in lower_text or "mailbox" in lower_text:
+            return f"smtp_{err.smtp_code}:{detail_text}"[:255]
+    return None
 
 
 def _build_message(
@@ -758,6 +1023,29 @@ def _append_send_history(path: str, key: str) -> None:
     p.parent.mkdir(parents=True, exist_ok=True)
     with p.open("a", encoding="utf-8") as fh:
         fh.write(f"{key}\n")
+
+
+def _load_suppressed_emails(path: str) -> set[str]:
+    p = Path(path)
+    if not p.exists():
+        return set()
+    out: set[str] = set()
+    for line in p.read_text(encoding="utf-8").splitlines():
+        item = line.strip().lower()
+        if not item or item.startswith("#"):
+            continue
+        out.add(item)
+    return out
+
+
+def _append_suppressed_email(path: str, email: str) -> None:
+    normalized = (email or "").strip().lower()
+    if not normalized:
+        return
+    p = Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    with p.open("a", encoding="utf-8") as fh:
+        fh.write(f"{normalized}\n")
 
 
 def _dedupe_key(campaign_id: str, email: str) -> str:
@@ -909,9 +1197,23 @@ def main():
     parser.add_argument("--test-email", help="Send a single test email to this address.")
     parser.add_argument("--test-company", default="Team", help="Company name to use for the test email.")
     parser.add_argument(
+        "--allow-role-based-emails",
+        action="store_true",
+        help="Allow sends to generic inboxes like info@, sales@, support@, and contact@.",
+    )
+    parser.add_argument(
+        "--suppress-email",
+        help="Add one exact email address to the invalid-email suppression list and exit.",
+    )
+    parser.add_argument(
         "--dedupe-history-file",
         default="output/email_send_history.log",
         help="Skip emails already sent for the same campaign using this history file.",
+    )
+    parser.add_argument(
+        "--invalid-email-file",
+        default="output/invalid_emails.log",
+        help="Skip exact email addresses listed in this suppression file.",
     )
     parser.add_argument(
         "--campaign-id",
@@ -926,14 +1228,19 @@ def main():
     parser.add_argument(
         "--reset-email-flags",
         action="store_true",
-        help="Reset DB email_sent/email_sent_at flags before selecting recipients.",
+        help="Reset DB email send and validation flags before selecting recipients.",
+    )
+    parser.add_argument(
+        "--skip-email-verification",
+        action="store_true",
+        help="Disable the pre-send domain and SMTP recipient verification steps.",
     )
     parser.add_argument("--dry-run", action="store_true", help="Print targets without sending.")
     args = parser.parse_args()
 
     if args.reset_email_flags:
         reset_count = reset_email_flags()
-        print(f"[MAIL] Reset DB email flags on {reset_count} rows.")
+        print(f"[MAIL] Reset DB email send/validation flags on {reset_count} rows.")
 
     smtp_host = (os.getenv("SMTP_HOST") or "").strip()
     smtp_port = int((os.getenv("SMTP_PORT") or "587").strip())
@@ -947,11 +1254,27 @@ def main():
     tracking_base_url = (
         os.getenv("EMAIL_TRACKING_BASE_URL") or ""
     ).strip()
+    suppressed_emails = _load_suppressed_emails(args.invalid_email_file)
+
+    if args.suppress_email:
+        suppressed_email = args.suppress_email.strip().lower()
+        if not _is_valid_email(suppressed_email):
+            raise SystemExit(f"[MAIL] Invalid --suppress-email value: {args.suppress_email}")
+        if suppressed_email in suppressed_emails:
+            print(f"[MAIL] Email already suppressed: {suppressed_email}")
+            return
+        _append_suppressed_email(args.invalid_email_file, suppressed_email)
+        print(f"[MAIL] Added suppressed invalid email: {suppressed_email}")
+        return
 
     if args.test_email:
         test_email = args.test_email.strip().lower()
         if not _is_valid_email(test_email):
             raise SystemExit(f"[MAIL] Invalid --test-email value: {args.test_email}")
+        if test_email in suppressed_emails:
+            raise SystemExit(
+                f"[MAIL] Skipping --test-email because it is in the invalid-email suppression list: {test_email}"
+            )
         targets = [(0, args.test_company, test_email)]
     else:
         targets = _load_targets(args.source, args.country, args.limit)
@@ -1011,20 +1334,79 @@ def main():
     sent = 0
     failed = 0
     skipped_duplicate = 0
+    skipped_invalid = 0
+    skipped_suppressed = 0
+    skipped_role_based = 0
     filtered_targets: list[tuple[int, str, str]] = []
+    domain_check_cache: dict[str, tuple[bool, str]] = {}
+    mx_cache: dict[str, list[str]] = {}
+    recipient_probe_cache: dict[str, tuple[bool, str]] = {}
 
     for company_id, company_name, email in targets:
+        if not args.allow_role_based_emails and _is_role_based_email(email):
+            skipped_role_based += 1
+            if company_id > 0:
+                _mark_email_invalid(company_id, "role_based_email_blocked")
+            normalized_email = email.strip().lower()
+            if normalized_email not in suppressed_emails:
+                suppressed_emails.add(normalized_email)
+                _append_suppressed_email(args.invalid_email_file, normalized_email)
+            print(f"  [SKIP-ROLE] {email} | role_based_email_blocked")
+            continue
+        if email.strip().lower() in suppressed_emails:
+            skipped_suppressed += 1
+            if company_id > 0:
+                _mark_email_invalid(company_id, "suppressed_invalid_email")
+            print(f"  [SKIP-SUPPRESSED] {email} | suppressed_invalid_email")
+            continue
         if not args.test_email:
             key = _dedupe_key(campaign_id, email)
             if key in send_history:
                 skipped_duplicate += 1
                 continue
+        if not args.skip_email_verification:
+            is_reachable, invalid_reason = _check_email_domain_exists(email, domain_check_cache)
+            if not is_reachable:
+                skipped_invalid += 1
+                if company_id > 0:
+                    _mark_email_invalid(company_id, invalid_reason)
+                normalized_email = email.strip().lower()
+                if normalized_email not in suppressed_emails:
+                    suppressed_emails.add(normalized_email)
+                    _append_suppressed_email(args.invalid_email_file, normalized_email)
+                print(f"  [INVALID EMAIL] {email} | {invalid_reason}")
+                continue
+            recipient_exists, recipient_reason = _check_email_recipient_exists(
+                email=email,
+                mail_from=smtp_from,
+                mx_cache=mx_cache,
+                probe_cache=recipient_probe_cache,
+                timeout_seconds=smtp_timeout,
+            )
+            if not recipient_exists:
+                skipped_invalid += 1
+                if company_id > 0:
+                    _mark_email_invalid(company_id, recipient_reason)
+                normalized_email = email.strip().lower()
+                if normalized_email not in suppressed_emails:
+                    suppressed_emails.add(normalized_email)
+                    _append_suppressed_email(args.invalid_email_file, normalized_email)
+                print(f"  [INVALID EMAIL] {email} | {recipient_reason}")
+                continue
+            if company_id > 0:
+                _mark_email_valid(company_id)
         filtered_targets.append((company_id, company_name, email))
 
     if skipped_duplicate:
         print(f"[MAIL] Skipping already-sent recipients: {skipped_duplicate}")
+    if skipped_role_based:
+        print(f"[MAIL] Skipping role-based recipients: {skipped_role_based}")
+    if skipped_suppressed:
+        print(f"[MAIL] Skipping suppressed invalid recipients: {skipped_suppressed}")
+    if skipped_invalid:
+        print(f"[MAIL] Skipping invalid recipients: {skipped_invalid}")
     if not filtered_targets:
-        print("[MAIL] Nothing to send after duplicate filtering.")
+        print("[MAIL] Nothing to send after duplicate and invalid-email filtering.")
         return
 
     for start in range(0, len(filtered_targets), batch_size):
@@ -1095,6 +1477,14 @@ def main():
                     print(f"  [OK] {email}")
                 except Exception as err:
                     failed += 1
+                    invalid_reason = _extract_invalid_reason(err)
+                    if company_id > 0 and invalid_reason:
+                        _mark_email_invalid(company_id, invalid_reason)
+                    if invalid_reason:
+                        normalized_email = email.strip().lower()
+                        if normalized_email not in suppressed_emails:
+                            suppressed_emails.add(normalized_email)
+                            _append_suppressed_email(args.invalid_email_file, normalized_email)
                     print(f"  [FAIL] {email} | {err}")
         finally:
             if smtp is not None:
@@ -1107,7 +1497,9 @@ def main():
             time.sleep(max(0.0, args.pause_seconds))
 
     print(
-        f"[MAIL] Done. Sent={sent}, Failed={failed}, SkippedDuplicate={skipped_duplicate}, Total={len(targets)}"
+        f"[MAIL] Done. Sent={sent}, Failed={failed}, SkippedDuplicate={skipped_duplicate}, "
+        f"SkippedRoleBased={skipped_role_based}, SkippedSuppressed={skipped_suppressed}, "
+        f"SkippedInvalid={skipped_invalid}, Total={len(targets)}"
     )
     _send_completion_copy(
         smtp_host=smtp_host,
