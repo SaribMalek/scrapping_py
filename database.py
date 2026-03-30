@@ -22,9 +22,9 @@ CREATE TABLE IF NOT EXISTS `companies` (
     `email`        VARCHAR(255) DEFAULT NULL,
     `email_sent`   TINYINT(1)   NOT NULL DEFAULT 0,
     `email_sent_at` DATETIME    DEFAULT NULL,
-    `email_valid`  TINYINT(1)   DEFAULT NULL,
+    `email_invalid` TINYINT(1)  NOT NULL DEFAULT 0,
     `email_invalid_reason` VARCHAR(255) DEFAULT NULL,
-    `email_validated_at` DATETIME DEFAULT NULL,
+    `email_invalid_at` DATETIME DEFAULT NULL,
     `email_tracking_token` VARCHAR(64) DEFAULT NULL,
     `email_opened` TINYINT(1)   NOT NULL DEFAULT 0,
     `email_opened_at` DATETIME  DEFAULT NULL,
@@ -109,25 +109,25 @@ def _ensure_email_tracking_columns(cursor) -> None:
         cursor.execute(
             "ALTER TABLE companies ADD COLUMN email_sent_at DATETIME DEFAULT NULL AFTER email_sent;"
         )
-    cursor.execute("SHOW COLUMNS FROM companies LIKE 'email_valid';")
+    cursor.execute("SHOW COLUMNS FROM companies LIKE 'email_invalid';")
     if not cursor.fetchone():
         cursor.execute(
-            "ALTER TABLE companies ADD COLUMN email_valid TINYINT(1) DEFAULT NULL AFTER email_sent_at;"
+            "ALTER TABLE companies ADD COLUMN email_invalid TINYINT(1) NOT NULL DEFAULT 0 AFTER email_sent_at;"
         )
     cursor.execute("SHOW COLUMNS FROM companies LIKE 'email_invalid_reason';")
     if not cursor.fetchone():
         cursor.execute(
-            "ALTER TABLE companies ADD COLUMN email_invalid_reason VARCHAR(255) DEFAULT NULL AFTER email_valid;"
+            "ALTER TABLE companies ADD COLUMN email_invalid_reason VARCHAR(255) DEFAULT NULL AFTER email_invalid;"
         )
-    cursor.execute("SHOW COLUMNS FROM companies LIKE 'email_validated_at';")
+    cursor.execute("SHOW COLUMNS FROM companies LIKE 'email_invalid_at';")
     if not cursor.fetchone():
         cursor.execute(
-            "ALTER TABLE companies ADD COLUMN email_validated_at DATETIME DEFAULT NULL AFTER email_invalid_reason;"
+            "ALTER TABLE companies ADD COLUMN email_invalid_at DATETIME DEFAULT NULL AFTER email_invalid_reason;"
         )
     cursor.execute("SHOW COLUMNS FROM companies LIKE 'email_tracking_token';")
     if not cursor.fetchone():
         cursor.execute(
-            "ALTER TABLE companies ADD COLUMN email_tracking_token VARCHAR(64) DEFAULT NULL AFTER email_validated_at;"
+            "ALTER TABLE companies ADD COLUMN email_tracking_token VARCHAR(64) DEFAULT NULL AFTER email_invalid_at;"
         )
     cursor.execute("SHOW COLUMNS FROM companies LIKE 'email_opened';")
     if not cursor.fetchone():
@@ -182,15 +182,9 @@ def reset_email_flags() -> int:
         """
         UPDATE companies
         SET email_sent = 0,
-            email_sent_at = NULL,
-            email_valid = NULL,
-            email_invalid_reason = NULL,
-            email_validated_at = NULL
+            email_sent_at = NULL
         WHERE COALESCE(email_sent, 0) <> 0
            OR email_sent_at IS NOT NULL
-           OR email_valid IS NOT NULL
-           OR email_invalid_reason IS NOT NULL
-           OR email_validated_at IS NOT NULL
         """
     )
     affected = cursor.rowcount

@@ -118,6 +118,41 @@ Optional filters:
 python send_campaign_emails.py --subject "Quick Introduction from Vivan Web Solution" --source clutch --country "United Kingdom" --batch-size 40 --pause-seconds 3
 ```
 
+Daily send example with automatic invalid-email skipping:
+```bash
+python send_campaign_emails.py --limit 50 --batch-size 50 --campaign-id "fresh-50-2026-03-19"
+```
+
+When you run the normal send command, it now:
+- validates email format
+- checks MX records before sending
+- skips invalid emails automatically
+- stores exact bad addresses in `output/invalid_emails.log` so they are skipped next time too
+
+Validate email addresses before sending:
+```bash
+python send_campaign_emails.py --validate-email sales@keyideas.com someone@gmail.com hello@notexist123.com
+```
+
+Validate email addresses directly from the `companies` table:
+```bash
+python send_campaign_emails.py --validate-db-emails
+```
+
+Validate only a filtered slice of DB emails:
+```bash
+python send_campaign_emails.py --validate-db-emails --source clutch --country "United States" --limit 50
+```
+
+This validation command checks:
+- Email format
+- MX records for the email domain
+
+If `dnspython` is not installed yet:
+```bash
+pip install -r requirements.txt
+```
+
 ---
 
 ## 📤 Export CSV
@@ -126,7 +161,10 @@ Results are auto-exported after each run. To manually export:
 ```bash
 python export_csv.py
 ```
-Output: `output/companies.csv`
+Outputs:
+- `output/companies_clutch.csv`
+- `output/companies_goodfirms.csv`
+- `output/companies_emails.csv` (plugin-ready format: `No,Name,Type,Mail`)
 
 ## 📊 Export Excel
 

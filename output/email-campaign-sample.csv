@@ -1,0 +1,4 @@
+name,email,company,status
+"John Doe",john@example.com,"Acme Inc",pending
+"Jane Smith",jane@example.com,"Beta Solutions",sent
+"Alex Brown",alex@example.com,"Creative Labs",opened

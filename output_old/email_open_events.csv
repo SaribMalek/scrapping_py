@@ -1,0 +1,5 @@
+opened_at,email,token,ip,user_agent,referer
+"2026-03-11 04:48:40",localnew@example.com,localnew,::1,"Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.26100.7920",
+"2026-03-11 04:48:40",cloudnew@example.com,cloudnew,::1,"Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.26100.7920",
+"2026-03-11 04:54:47",sarib.malek@vivanwebsolution.com,4ee69f4586ce4e75825fcc08579e83f8,::1,"Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko Firefox/11.0 (via ggpht.com GoogleImageProxy)",
+"2026-03-11 04:56:57",sarib.malek@vivanwebsolution.com,be7fe3c5834143e384f7e41b4c1e966b,::1,"Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko Firefox/11.0 (via ggpht.com GoogleImageProxy)",

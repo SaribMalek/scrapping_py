@@ -234,7 +234,7 @@ def _check_email_recipient_exists(
                 except Exception:
                     pass
 
-    probe_cache[normalized_email] = (False, last_probe_error or f"smtp_probe_inconclusive:{domain}")
+    probe_cache[normalized_email] = (True, last_probe_error or f"smtp_probe_inconclusive:{domain}")
     return probe_cache[normalized_email]
 
 
@@ -1188,6 +1188,7 @@ def main():
     parser.add_argument("--limit", type=int, default=None, help="Max companies from DB before dedupe.")
     parser.add_argument("--batch-size", type=int, default=50, help="Emails per SMTP connection batch.")
     parser.add_argument("--pause-seconds", type=float, default=2.0, help="Pause between batches.")
+    parser.add_argument("--pause-between-emails", type=float, default=2.0, help="Pause between individual emails in a batch.")
     parser.add_argument("--template-file", help="Optional HTML file with {company_name} placeholder.")
     parser.add_argument(
         "--screenshot-path",
@@ -1343,16 +1344,6 @@ def main():
     recipient_probe_cache: dict[str, tuple[bool, str]] = {}
 
     for company_id, company_name, email in targets:
-        if not args.allow_role_based_emails and _is_role_based_email(email):
-            skipped_role_based += 1
-            if company_id > 0:
-                _mark_email_invalid(company_id, "role_based_email_blocked")
-            normalized_email = email.strip().lower()
-            if normalized_email not in suppressed_emails:
-                suppressed_emails.add(normalized_email)
-                _append_suppressed_email(args.invalid_email_file, normalized_email)
-            print(f"  [SKIP-ROLE] {email} | role_based_email_blocked")
-            continue
         if email.strip().lower() in suppressed_emails:
             skipped_suppressed += 1
             if company_id > 0:
@@ -1486,6 +1477,9 @@ def main():
                             suppressed_emails.add(normalized_email)
                             _append_suppressed_email(args.invalid_email_file, normalized_email)
                     print(f"  [FAIL] {email} | {err}")
+                
+                if args.pause_between_emails > 0:
+                    time.sleep(args.pause_between_emails)
         finally:
             if smtp is not None:
                 try:
