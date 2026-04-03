@@ -28,7 +28,8 @@ Edit `config.py` if your MySQL password is different from the default (empty).
 ```bash
 python database.py
 ```
-This creates the `scrapper_db` database and `companies` table in MySQL.
+This creates the `scrapper_db` database, the `companies` table, and the
+`justdial_companies` table in MySQL.
 
 ---
 
@@ -82,6 +83,21 @@ python main.py --all
 ### Limit pages per country (faster testing):
 ```bash
 python main.py --source clutch --country "India" --max-pages 2
+```
+
+### Scrape Justdial businesses for Ahmedabad and store them in MySQL:
+```bash
+python scrape_justdial.py --city "Ahmedabad" --max-pages 1
+```
+
+### Scrape specific Justdial categories:
+```bash
+python scrape_justdial.py --city "Ahmedabad" --search-term "Restaurants" --search-term "Hospitals" --max-pages 2
+```
+
+### Scrape from a direct Justdial listing URL:
+```bash
+python scrape_justdial.py --city "Ahmedabad" --search-term "Restaurants" --listing-url "https://www.justdial.com/Ahmedabad/Restaurants-in-Ode/nct-10408936"
 ```
 
 ### Send personalized campaign emails to scraped companies:
@@ -192,6 +208,26 @@ Outputs:
 | phone | Extracted phone number |
 | email | Extracted email address |
 | scraped_at | Timestamp when scraped |
+
+---
+
+## Justdial Schema
+
+| Column | Description |
+|--------|-------------|
+| source_platform | Always `justdial` so the source is clearly marked |
+| city | City used for the Justdial search |
+| search_term | Category / keyword used in the command |
+| business_name | Business name from Justdial |
+| category | Category text found on the listing |
+| area | Area or locality from the listing |
+| address | Address from the detail page |
+| detail_url | Justdial detail page URL |
+| website_url | External business website if available |
+| phone | Phone number if available |
+| rating | Business rating |
+| rating_count | Total ratings count |
+| scraped_at | Timestamp when the record was scraped |
 
 ---
 

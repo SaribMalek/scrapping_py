@@ -9,6 +9,7 @@ import threading
 from html import unescape
 from urllib.parse import parse_qs, unquote, urljoin, urlparse
 
+import dns.resolver
 import requests
 from bs4 import BeautifulSoup
 
@@ -71,6 +72,7 @@ CONTACT_HINTS = (
 )
 
 _thread_local = threading.local()
+_mx_cache: dict[str, bool] = {}
 
 
 def _get_session() -> requests.Session:
@@ -114,20 +116,43 @@ def _is_valid_phone(number: str) -> bool:
         return False
     if len(set(digits)) <= 1:
         return False
+    if len(digits) > 12 and not (raw := number).startswith(("+", "00")):
+        return False
     # Avoid long plain numeric IDs unless prefixed as international format.
     if number.isdigit() and len(digits) > 10:
         return False
     return True
 
 
+def _has_mx(domain: str) -> bool:
+    domain = (domain or "").strip().lower()
+    if not domain:
+        return False
+    if domain in _mx_cache:
+        return _mx_cache[domain]
+    try:
+        answers = dns.resolver.resolve(domain, "MX")
+        ok = bool(answers)
+    except Exception:
+        ok = False
+    _mx_cache[domain] = ok
+    return ok
+
+
 def _is_valid_email(email: str) -> bool:
     email = (email or "").strip().lower()
     if not email or "@" not in email:
+        return False
+    if not re.fullmatch(r"[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,24}", email, re.I):
         return False
     domain = email.split("@")[-1]
     if domain in JUNK_EMAIL_DOMAINS:
         return False
     if email.endswith((".png", ".jpg", ".gif", ".svg", ".js")):
+        return False
+    if domain.count(".") == 0:
+        return False
+    if not _has_mx(domain):
         return False
     return True
 
@@ -296,6 +321,13 @@ def _extract_from_html(html: str, base_url: str = "") -> tuple[str, str]:
     return phone, email
 
 
+def extract_contacts_from_html(html: str, base_url: str = "") -> tuple[str, str]:
+    """Extract (phone, email) directly from already-fetched HTML."""
+    if not html:
+        return "", ""
+    return _extract_from_html(html, base_url)
+
+
 def _try_contact_pages(base_url: str, homepage_html: str = "") -> tuple[str, str]:
     fixed_suffixes = [
         "/contact",
@@ -382,7 +414,12 @@ def _resolve_clutch_profile(url: str) -> str:
     return url
 
 
-def extract_contacts(url: str) -> tuple[str, str]:
+def extract_contacts(
+    url: str,
+    *,
+    deep_lookup_override: bool | None = None,
+    contact_page_limit_override: int | None = None,
+) -> tuple[str, str]:
     """Given a company URL, return (phone, email)."""
     if not url:
         return "", ""
@@ -395,9 +432,19 @@ def extract_contacts(url: str) -> tuple[str, str]:
 
     phone, email = _extract_from_html(html, target_url)
 
-    deep_lookup = bool(SCRAPER_SETTINGS.get("deep_contact_lookup", False))
+    deep_lookup = (
+        bool(deep_lookup_override)
+        if deep_lookup_override is not None
+        else bool(SCRAPER_SETTINGS.get("deep_contact_lookup", False))
+    )
     if deep_lookup and (not phone or not email):
-        p2, e2 = _try_contact_pages(target_url, homepage_html=html)
+        original_limit = SCRAPER_SETTINGS.get("contact_page_limit", 2)
+        try:
+            if contact_page_limit_override is not None:
+                SCRAPER_SETTINGS["contact_page_limit"] = max(1, int(contact_page_limit_override))
+            p2, e2 = _try_contact_pages(target_url, homepage_html=html)
+        finally:
+            SCRAPER_SETTINGS["contact_page_limit"] = original_limit
         if not phone:
             phone = p2
         if not email:

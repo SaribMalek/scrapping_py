@@ -47,6 +47,28 @@ CREATE TABLE IF NOT EXISTS `scrape_progress` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 """
 
+CREATE_JUSTDIAL_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS `justdial_companies` (
+    `id`              INT AUTO_INCREMENT PRIMARY KEY,
+    `source_platform` VARCHAR(50)  NOT NULL DEFAULT 'justdial',
+    `city`            VARCHAR(100) NOT NULL,
+    `search_term`     VARCHAR(255) NOT NULL,
+    `business_name`   VARCHAR(255) NOT NULL,
+    `category`        VARCHAR(255) DEFAULT NULL,
+    `area`            VARCHAR(255) DEFAULT NULL,
+    `address`         TEXT         DEFAULT NULL,
+    `detail_url`      TEXT         DEFAULT NULL,
+    `website_url`     TEXT         DEFAULT NULL,
+    `phone`           VARCHAR(150) DEFAULT NULL,
+    `email`           VARCHAR(255) DEFAULT NULL,
+    `rating`          DECIMAL(3,1) DEFAULT NULL,
+    `rating_count`    INT          DEFAULT NULL,
+    `scraped_at`      DATETIME     DEFAULT NULL,
+    `updated_at`      DATETIME     DEFAULT NULL,
+    UNIQUE KEY `uniq_justdial_listing` (`source_platform`, `city`, `search_term`, `business_name`(180))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+"""
+
 
 def get_connection(with_db: bool = True):
     """Return a fresh MySQL connection."""
@@ -64,6 +86,7 @@ def init_db():
     cursor.execute(f"USE `{DB_CONFIG['database']}`;")
     cursor.execute(CREATE_TABLE_SQL)
     cursor.execute(CREATE_PROGRESS_TABLE_SQL)
+    cursor.execute(CREATE_JUSTDIAL_TABLE_SQL)
     # Keep newest row per (source, company_name) so unique index can be enforced safely.
     cursor.execute(
         """
@@ -92,6 +115,7 @@ def init_db():
             "ALTER TABLE companies ADD UNIQUE KEY uniq_source_name (source, company_name(180));"
         )
     _ensure_email_tracking_columns(cursor)
+    _ensure_justdial_columns(cursor)
     conn.commit()
     cursor.close()
     conn.close()
@@ -173,6 +197,70 @@ def ensure_email_tracking_columns() -> None:
     conn.commit()
     cursor.close()
     conn.close()
+
+
+def _ensure_justdial_columns(cursor) -> None:
+    cursor.execute("SHOW COLUMNS FROM justdial_companies LIKE 'email';")
+    if not cursor.fetchone():
+        cursor.execute(
+            "ALTER TABLE justdial_companies ADD COLUMN email VARCHAR(255) DEFAULT NULL AFTER phone;"
+        )
+    cursor.execute(
+        """
+        SELECT COUNT(1)
+        FROM information_schema.statistics
+        WHERE table_schema = %s
+          AND table_name = 'justdial_companies'
+          AND index_name = 'uniq_justdial_listing'
+        """,
+        (DB_CONFIG["database"],),
+    )
+    has_unique = (cursor.fetchone() or [0])[0] > 0
+    if has_unique:
+        cursor.execute("ALTER TABLE justdial_companies DROP INDEX uniq_justdial_listing;")
+    _dedupe_justdial_companies(cursor)
+    cursor.execute(
+        """
+        ALTER TABLE justdial_companies
+        ADD UNIQUE KEY uniq_justdial_listing (source_platform, city, search_term, business_name(180));
+        """
+    )
+
+
+def _dedupe_justdial_companies(cursor) -> None:
+    cursor.execute(
+        """
+        UPDATE justdial_companies keep_row
+        INNER JOIN justdial_companies old_row
+            ON keep_row.source_platform = old_row.source_platform
+           AND keep_row.city = old_row.city
+           AND keep_row.search_term = old_row.search_term
+           AND keep_row.business_name = old_row.business_name
+           AND keep_row.id > old_row.id
+        SET
+            keep_row.category = COALESCE(NULLIF(keep_row.category, ''), old_row.category),
+            keep_row.area = COALESCE(NULLIF(keep_row.area, ''), old_row.area),
+            keep_row.address = COALESCE(NULLIF(keep_row.address, ''), old_row.address),
+            keep_row.detail_url = COALESCE(NULLIF(keep_row.detail_url, ''), old_row.detail_url),
+            keep_row.website_url = COALESCE(NULLIF(keep_row.website_url, ''), old_row.website_url),
+            keep_row.phone = COALESCE(NULLIF(keep_row.phone, ''), old_row.phone),
+            keep_row.email = COALESCE(NULLIF(keep_row.email, ''), old_row.email),
+            keep_row.rating = COALESCE(keep_row.rating, old_row.rating),
+            keep_row.rating_count = COALESCE(keep_row.rating_count, old_row.rating_count)
+        """
+    )
+    cursor.execute(
+        """
+        DELETE older
+        FROM justdial_companies older
+        INNER JOIN justdial_companies newer
+            ON older.source_platform = newer.source_platform
+           AND older.city = newer.city
+           AND older.search_term = newer.search_term
+           AND older.business_name = newer.business_name
+           AND older.id < newer.id
+        """
+    )
 
 
 def reset_email_flags() -> int:
@@ -277,6 +365,79 @@ def save_companies_batch(rows: list[dict]):
         conn.close()
     except mysql.connector.Error as err:
         print(f"[DB ERROR] Batch save failed: {err}")
+
+
+def _justdial_upsert_sql() -> str:
+    return """
+        INSERT INTO justdial_companies (
+            source_platform,
+            city,
+            search_term,
+            business_name,
+            category,
+            area,
+            address,
+            detail_url,
+            website_url,
+            phone,
+            email,
+            rating,
+            rating_count,
+            scraped_at,
+            updated_at
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ON DUPLICATE KEY UPDATE
+            category     = COALESCE(NULLIF(VALUES(category), ''), category),
+            area         = COALESCE(NULLIF(VALUES(area), ''), area),
+            address      = COALESCE(NULLIF(VALUES(address), ''), address),
+            detail_url   = COALESCE(NULLIF(VALUES(detail_url), ''), detail_url),
+            website_url  = COALESCE(NULLIF(VALUES(website_url), ''), website_url),
+            phone        = COALESCE(NULLIF(VALUES(phone), ''), phone),
+            email        = COALESCE(NULLIF(VALUES(email), ''), email),
+            rating       = COALESCE(VALUES(rating), rating),
+            rating_count = COALESCE(VALUES(rating_count), rating_count),
+            scraped_at   = VALUES(scraped_at),
+            updated_at   = VALUES(updated_at)
+    """
+
+
+def save_justdial_companies_batch(rows: list[dict]):
+    """Bulk insert/update Justdial companies with a single DB connection."""
+    if not rows:
+        return
+
+    now = datetime.now()
+    values = [
+        (
+            _clean(row.get("source_platform") or "justdial"),
+            _clean(row.get("city")),
+            _clean(row.get("search_term")),
+            _clean(row.get("business_name")),
+            _clean(row.get("category")),
+            _clean(row.get("area")),
+            _clean(row.get("address")),
+            _clean(row.get("detail_url")),
+            _clean(row.get("website_url")),
+            _clean(row.get("phone")),
+            _clean(row.get("email")),
+            row.get("rating"),
+            row.get("rating_count"),
+            now,
+            now,
+        )
+        for row in rows
+    ]
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.executemany(_justdial_upsert_sql(), values)
+        conn.commit()
+        cursor.close()
+        conn.close()
+    except mysql.connector.Error as err:
+        print(f"[DB ERROR] Justdial batch save failed: {err}")
 
 
 def get_all_companies():
