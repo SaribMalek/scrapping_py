@@ -10,7 +10,7 @@ from __future__ import annotations
 import argparse
 
 from config import JUSTDIAL_ALL_BUSINESS_TERMS, JUSTDIAL_DEFAULT_SEARCH_TERMS, SCRAPER_SETTINGS
-from database import init_db, save_companies_batch, save_justdial_companies_batch
+from database import init_db, save_justdial_companies_batch
 from scrapers.justdial_scraper import scrape_justdial
 
 
@@ -112,22 +112,8 @@ def main():
             continue
 
         save_justdial_companies_batch(rows)
-        save_companies_batch(
-            [
-                {
-                    "source": "justdial",
-                    "company_name": row.get("business_name", ""),
-                    "country": "India",
-                    "city": row.get("city", ""),
-                    "website_url": row.get("website_url") or row.get("detail_url") or "",
-                    "phone": row.get("phone", ""),
-                    "email": row.get("email", ""),
-                }
-                for row in rows
-            ]
-        )
         total_saved += len(rows)
-        print(f"[Justdial Command] Saved {len(rows)} rows for '{term}' into justdial_companies and companies.")
+        print(f"[Justdial Command] Saved {len(rows)} rows for '{term}' into justdial_companies.")
 
     print(f"\n[Justdial Command] Completed. Total saved rows: {total_saved}")
 
